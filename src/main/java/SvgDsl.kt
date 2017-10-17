@@ -1,3 +1,4 @@
+
 import Dimension.X
 import Dimension.Y
 import com.github.sybila.ode.generator.NodeEncoder
@@ -5,8 +6,6 @@ import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.Parser
 import java.io.BufferedWriter
 import java.io.File
-import kotlin.collections.ArrayList
-import kotlin.collections.HashSet
 
 enum class Dimension { X, Y }
 
@@ -27,7 +26,7 @@ data class Style(val properties: Map<String, String>) {
         val FILL = Style(mapOf("fill" to "black"))
     }
 
-    fun writeSVG(): String = buildString {
+    fun compileAttributes(): String = buildString {
         for ((key, value) in properties) {
             append("$key=\"$value\" ")
         }
@@ -54,7 +53,7 @@ data class Rectangle(val bottom: Point, val top: Point, val style: Style = Style
         get() = middle(bottom, top)
 
     fun writeSVG(writer: BufferedWriter) = writer.run {
-        appendln("<rect x=\"${bottom.x}\" y=\"${bottom.y}\" width=\"${top.x - bottom.x}\" height=\"${top.y - bottom.y}\" ${style.writeSVG()}/>")
+        appendln("<rect x=\"${bottom.x}\" y=\"${bottom.y}\" width=\"${top.x - bottom.x}\" height=\"${top.y - bottom.y}\" ${style.compileAttributes()}/>")
     }
 
     inline fun map(action: (Point) -> Point): Rectangle = Rectangle(action(bottom), action(top), style)
@@ -67,7 +66,38 @@ data class Rectangle(val bottom: Point, val top: Point, val style: Style = Style
 
 }
 
-data class Circle(val middle: Point, val radius: Double, val style: Style = Style.DEFAULT) {
+data class Circle(
+        override val center: Point,
+        val radius: Double,
+        override val style: Style
+) : SvgPrimitive<Circle> {
+
+    val up: Point
+        get() = center + Point(0.0, radius)
+
+    val down: Point
+        get() = center + Point(0.0, -radius)
+
+    val left: Point
+        get() = center + Point(-radius, 0.0)
+
+    val right: Point
+        get() = center + Point(radius, 0.0)
+
+    override fun compileSvg(): String =
+            """<circle cx="${center.x}" cy="${center.y}" r="$radius" ${style.compileAttributes()} />"""
+
+    override fun scale(factor: Double): Circle =
+            copy(center = center * factor, radius = radius * factor)
+
+    override fun flipY(height: Double): Circle =
+            copy(center = center.flipY(height))
+
+    override fun translate(delta: Point): Circle =
+            copy(center = center + delta)
+}
+
+data class CircleOld(val middle: Point, val radius: Double, val style: Style = Style.DEFAULT) {
 
     fun getBoundaryPoint(d: Dimension, up: Boolean): Point = when (d) {
         X -> middle.copy(x = middle.x + if (up) radius else -radius)
@@ -75,7 +105,7 @@ data class Circle(val middle: Point, val radius: Double, val style: Style = Styl
     }
 
     fun writeSVG(writer: BufferedWriter) = writer.run {
-        appendln("<circle cx=\"${middle.x}\" cy=\"${middle.y}\" r=\"$radius\" ${style.writeSVG()}/>")
+        appendln("<circle cx=\"${middle.x}\" cy=\"${middle.y}\" r=\"$radius\" ${style.compileAttributes()}/>")
     }
 
     fun flipY(height: Double): Circle {
@@ -88,8 +118,43 @@ data class Circle(val middle: Point, val radius: Double, val style: Style = Styl
 data class Arrow(val start: Point, val stop: Point, val style: Style = Style.DEFAULT) {
 
     fun writeSVG(writer: BufferedWriter) = writer.run {
-        appendln("<line x1=\"${start.x}\" y1=\"${start.y}\" x2=\"${stop.x}\" y2=\"${stop.y}\" marker-end=\"url(#arrow)\" ${style.writeSVG()} />")
+        appendln("<line x1=\"${start.x}\" y1=\"${start.y}\" x2=\"${stop.x}\" y2=\"${stop.y}\" marker-end=\"url(#arrow)\" ${style.compileAttributes()} />")
     }
+
+}
+
+interface SvgPrimitive<P : SvgPrimitive<P>> {
+
+    /**
+     * Style properties of this primitive.
+     */
+    val style: Style
+
+    /**
+     * Geometrically central point of this structure.
+     */
+    val center: Point
+
+    /**
+     * Compile this primitive into a set of svg elements which can directly used within the result file.
+     */
+    fun compileSvg(): String
+
+    /**
+     * Resize this object using [0,0] as the center of resizing.
+     */
+    fun scale(factor: Double): P
+
+    /**
+     * Move this object by [delta].
+     */
+    fun translate(delta: Point): P
+
+    /**
+     * Flip the object with respect to the given height.
+     * This is useful for inverting the Y axis to resemble scientific coordinate systems.
+     */
+    fun flipY(height: Double): P
 
 }
 
@@ -111,6 +176,16 @@ fun Pair<Point, Point>.highThird(): Point = Point(
         ((this.first.y + this.second.y)) / 3.0 * 2.0
 )
 
+data class SVG_Image(
+        val rectangles: List<Rectangle>,
+        val circle: List<Circle>,
+        val arrow: List<Arrow>
+)
+
+data class PWMA_Image(
+        val model: RectangleOdeModel,
+        val property: Map<String, Set<Int>>
+)
 
 data class PWMA_StateSpace(
         val states: List<Rectangle>,
