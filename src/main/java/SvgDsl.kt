@@ -1,8 +1,12 @@
 import Dimension.X
 import Dimension.Y
+import com.github.sybila.ode.generator.NodeEncoder
+import com.github.sybila.ode.generator.rect.RectangleOdeModel
+import com.github.sybila.ode.model.Parser
 import java.io.BufferedWriter
 import java.io.File
-import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashSet
 
 enum class Dimension { X, Y }
 
@@ -31,6 +35,12 @@ data class Style(val properties: Map<String, String>) {
 }
 
 data class Rectangle(val bottom: Point, val top: Point, val style: Style = Style.DEFAULT) {
+
+    val width: Double
+        get() = top.x - bottom.x
+
+    val height: Double
+        get() = top.y - bottom.y
 
     fun getEdge(d: Dimension, up: Boolean): Pair<Point, Point> = when {
         d == X && !up -> bottom to top.copy(x = bottom.x)
@@ -64,9 +74,24 @@ data class Circle(val middle: Point, val radius: Double, val style: Style = Styl
         Y -> middle.copy(y = middle.y + if (up) radius else -radius)
     }
 
+    fun writeSVG(writer: BufferedWriter) = writer.run {
+        appendln("<circle cx=\"${middle.x}\" cy=\"${middle.y}\" r=\"$radius\" ${style.writeSVG()}/>")
+    }
+
+    fun flipY(height: Double): Circle {
+        val newY = middle.y
+        return copy(middle = middle.copy(y = newY))
+    }
+
 }
 
-data class Arrow(val start: Point, val stop: Point, val style: Style = Style.DEFAULT)
+data class Arrow(val start: Point, val stop: Point, val style: Style = Style.DEFAULT) {
+
+    fun writeSVG(writer: BufferedWriter) = writer.run {
+        appendln("<line x1=\"${start.x}\" y1=\"${start.y}\" x2=\"${stop.x}\" y2=\"${stop.y}\" marker-end=\"url(#arrow)\" ${style.writeSVG()} />")
+    }
+
+}
 
 fun xy(x: Double, y: Double) = Point(x,y)
 
@@ -89,7 +114,8 @@ fun Pair<Point, Point>.highThird(): Point = Point(
 
 data class PWMA_StateSpace(
         val states: List<Rectangle>,
-        val transitions: List<Transition>
+        val transitions: List<Transition>,
+        val highlight: List<Rectangle>
 ) {
 
     data class Transition(
@@ -108,13 +134,64 @@ data class PWMA_StateSpace(
         val height = maxY - minY
 
         val scaleFactor = (targetWidth ?: width) / width
+        val rectangleScale = states.first().width * scaleFactor * 1.5
         val shift = Point(-minX, -minY)
 
         appendln("<?xml version=\"1.0\" standalone=\"no\"?>")
         appendln("<svg width=\"${width * scaleFactor}\" height=\"${height * scaleFactor}\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">")
 
+        appendln(
+"""
+<defs>
+    <marker id="arrow" markerWidth="${0.1 * rectangleScale}" markerHeight="${0.1 * rectangleScale}" refX="${0.09 * rectangleScale}" refY="${0.025 * rectangleScale}" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,${0.05 * rectangleScale} L${0.09 * rectangleScale},${0.025 * rectangleScale} z" fill="#000" />
+    </marker>
+</defs>
+""")
+
+        fun Rectangle.toState(): Circle {
+            val radius = Math.min(this.width, this.height) / 6.0;
+            val style = if (Transition(this, this) in transitions) Style.FILL else Style.STROKE
+            return Circle((center + shift).flipY(height) * scaleFactor, radius * scaleFactor, style)
+        }
+
         states.forEach {
-            it.map { it + shift }.flipY(height).map { it * scaleFactor }.writeSVG(this)
+            it.map { it + shift }.flipY(height).map { it * scaleFactor }.copy(style = Style.STROKE).writeSVG(this)
+        }
+
+        val states = this@PWMA_StateSpace.states.map { it.toState() }
+        val transitions = this@PWMA_StateSpace.transitions.map { (from, to) ->
+            when {
+                from.getEdge(X, true) == to.getEdge(X, false) -> Arrow(
+                        from.toState().getBoundaryPoint(X, true),
+                        to.toState().getBoundaryPoint(X, false), Style.STROKE
+                )
+                from.getEdge(X, false) == to.getEdge(X, true) -> Arrow(
+                        from.toState().getBoundaryPoint(X, false),
+                        to.toState().getBoundaryPoint(X, true), Style.STROKE
+                )
+                from.getEdge(Y, true) == to.getEdge(Y, false) -> Arrow(
+                        from.toState().getBoundaryPoint(Y, false),
+                        to.toState().getBoundaryPoint(Y, true), Style.STROKE
+                )
+                from.getEdge(Y, false) == to.getEdge(Y, true) -> Arrow(
+                        from.toState().getBoundaryPoint(Y, true),
+                        to.toState().getBoundaryPoint(Y, false), Style.STROKE
+                )
+                else -> null
+            }
+        }.filterNotNull()
+
+        states.forEach {
+            it.writeSVG(this)
+        }
+
+        transitions.forEach {
+            it.writeSVG(this)
+        }
+
+        highlight.forEach {
+            it.map { it + shift }.flipY(height).map { it * scaleFactor }.copy(style = Style.FILL).writeSVG(this)
         }
 
         appendln("</svg>")
@@ -148,21 +225,77 @@ ${items.joinToString(separator = "\n")}
 }
 
 fun main(args: Array<String>) {
+    val input = File("/Users/daemontus/Downloads/test.bio")
     val f = File("/Users/daemontus/Downloads/test.svg")
+    val thresholds = (0..50).map { it / 5.0 }
+    val model = Parser().parse(input).let { m ->
+        m.copy(variables = m.variables.map { v ->
+            v.copy(thresholds = thresholds)
+        })
+    }
+
+    //.computeApproximation(cutToRange = true)
+    val ts = RectangleOdeModel(model, createSelfLoops = true)
+    ts.run {
+        val encoder = NodeEncoder(model)
+        val states = (0 until stateCount).map { s ->
+            Rectangle(
+                    xy( model.variables[0].thresholds[encoder.lowerThreshold(s, 0)],
+                        model.variables[1].thresholds[encoder.lowerThreshold(s, 1)]
+                    ),
+                    xy( model.variables[0].thresholds[encoder.upperThreshold(s, 0)],
+                        model.variables[1].thresholds[encoder.upperThreshold(s, 1)]
+                    )
+            )
+        }
+        val transitions = (0 until stateCount).flatMap { s ->
+            //println("$s: " + s.successors(true).asSequence().map { it.target }.toList())
+            s.successors(true).asSequence().map {
+                PWMA_StateSpace.Transition(states[s], states[it.target])
+            }.toList()
+        }
+        val attractor = HashSet<Int>()
+        for (s in (0 until stateCount)) {
+            println(s)
+            //bind s : AG EF s = ! EF ! EF s
+            if (s in invert(fixedPoint(invert(fixedPoint(setOf(s)))))) {
+                attractor.add(s)
+            }
+        }
+        println("Attr: $attractor")
+        f.bufferedWriter().use {
+            PWMA_StateSpace(states, transitions, attractor.toList().map { states[it] }).writeSVG(it, targetWidth = 1000.0)
+        }
+    }
+    /*
+    val dd = Rectangle(xy(-1.0, -1.0), xy(0.0, 0.0), Style.STROKE)
+    val dh = Rectangle(xy(0.0, -1.0), xy(1.0, 0.0), Style.STROKE)
+    val hd = Rectangle(xy(-1.0, 0.0), xy(0.0, 1.0), Style.STROKE)
+    val hh = Rectangle(xy(0.0, 0.0), xy(1.0, 1.0), Style.STROKE)
     val system = PWMA_StateSpace(
-            (-5..5).flatMap { x ->
+            /*(-5..5).flatMap { x ->
                 (-3..4).map { y ->
                     Rectangle(xy(x.toDouble(), y.toDouble()), xy(x + 1.0, y + 1.0), Style.STROKE)
                 }
-            }
-            /*listOf(
-                    Rectangle(xy(-1.0, -1.0), xy(0.0, 0.0), Style.STROKE),
-                    Rectangle(xy(0.0, -1.0), xy(1.0, 0.0), Style.STROKE),
-                    Rectangle(xy(-1.0, 0.0), xy(0.0, 1.0), Style.STROKE),
-                    Rectangle(xy(0.0, 0.0), xy(1.0, 1.0), Style.STROKE)
-            )*/, listOf()
-    )
-    f.bufferedWriter().use {
-        system.writeSVG(it, targetWidth = 1000.0)
-    }
+            }*/
+            listOf(dd, dh, hd, hh), listOf(
+                PWMA_StateSpace.Transition(dd, dh),
+                PWMA_StateSpace.Transition(dd, dd),
+                PWMA_StateSpace.Transition(hh, hd),
+                PWMA_StateSpace.Transition(dd, hd),
+                PWMA_StateSpace.Transition(hd, dd),
+                PWMA_StateSpace.Transition(hh, dh)
+            )
+    )*/
 }
+
+fun RectangleOdeModel.fixedPoint(input: Set<Int>): Set<Int> {
+    var iteration = input
+    do {
+        val old = iteration
+        iteration = iteration + iteration.flatMap { it.successors(false).asSequence().map { it.target }.toList() }.toSet()
+    } while (old.toList().sorted() != iteration.toList().sorted())
+    return iteration
+}
+
+fun RectangleOdeModel.invert(input: Set<Int>): Set<Int> = (0 until stateCount).toSet() - input
