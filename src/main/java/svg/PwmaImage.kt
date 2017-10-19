@@ -13,12 +13,13 @@ data class PwmaImage(
     fun toSvgImage(): SvgImage = model.run {
         val tX = ode.variables[0].thresholds
         val tY = ode.variables[1].thresholds
+        val encoder = NodeEncoder(ode)
 
+        // Set arrow size as 1/10th of average rectangle size in X dimension.
         val boundsX = tX.dropLast(1).zip(tX.drop(1))
-        val boundsY = tY.dropLast(1).zip(tY.drop(1))
-
-        // set arrow size as 1/10th of average rectangle size in X dimension.
         val arrowSize = boundsX.map { (l, h) -> h - l }.average() / 5.0
+
+        // Draw rectangular grid.
         val gridX = tX.map { x ->
             Line(xy(x, tY.first()), xy(x, tY.last()), Style.STROKE)
         }
@@ -26,7 +27,7 @@ data class PwmaImage(
             Line(xy(tX.first(), y), xy(tX.last(), y), Style.STROKE)
         }
 
-        val encoder = NodeEncoder(ode)
+        // Draw state circles, possibly with self-loops.
         val states = (0 until stateCount).map { s ->
             // create circles
             val (x, y) = encoder.decodeNode(s)
@@ -45,6 +46,7 @@ data class PwmaImage(
             }
         }
 
+        // Draw transitions between closest anchor of each state.
         val transitions = (0 until stateCount).flatMap { s ->
             s.successors(true).asSequence().map { (t, _, _) ->
                 val from = states[s]

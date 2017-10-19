@@ -53,6 +53,6 @@ interface ModelFactory {
 (define-ode flow_1 ((= d/dt[$x] ${makeModelEquation(0, variables + p.toString())}) (= d/dt[$y] ${makeModelEquation(1, variables + p.toString())})))
 """.trim()
 
-    fun unknownDimension(i: Int): Nothing = error("svg.Dimension  $i does not exist in $this")
+    fun unknownDimension(i: Int): Nothing = error("svg.Dimension $i does not exist in $this")
 
 }

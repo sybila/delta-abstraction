@@ -74,7 +74,7 @@ fun main(args: Array<String>) {
 
     val output = File("/Users/daemontus/Downloads/test.svg")
     val multiplier = 100.0
-    val image = SVG(1000.0, 1000.0) {
+    /*val image = SVG(1000.0, 1000.0) {
         done.forEach {
             addRectangle(it.x1 * multiplier, it.y1 * multiplier, it.x2 * multiplier, it.y2 * multiplier, fill = 0.0)
         }
@@ -84,7 +84,7 @@ fun main(args: Array<String>) {
         unsafe.forEach {
             addRectangle(it.x1 * multiplier, it.y1 * multiplier, it.x2 * multiplier, it.y2 * multiplier, fill = 1.0)
         }
-    }
+    }*/
     /*println("Unsafe: ${unsafe.first()}")
     unsafe.forEach {  r ->
         val flowQuery = modelTemplate.replace("#commands",
@@ -107,6 +107,6 @@ fun main(args: Array<String>) {
             return
         }
     }*/
-    println("Elapsed: ${System.currentTimeMillis() - start}")
-    output.writeText(image)
+    //println("Elapsed: ${System.currentTimeMillis() - start}")
+    //output.writeText(image)
 }

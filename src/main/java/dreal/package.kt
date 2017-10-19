@@ -50,3 +50,22 @@ $query
 (check-sat)
 (exit)
 """.trim()
+
+sealed class State {
+
+    /**
+     * Abstract state representing the trajectories outside of the system bounds.
+     */
+    object Exterior : State()
+
+    /**
+     * Abstract state representing the interior trajectories of given [rectangle].
+     */
+    data class Interior(val rectangle: Int) : State()
+
+    /**
+     * Abstract state representing trajectories flowing [from] one given rectangle [to] the other one.
+     */
+    data class Transition(val from: Int?, val to: Int?) : State()
+
+}

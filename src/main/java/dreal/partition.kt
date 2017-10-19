@@ -1,6 +1,5 @@
 package dreal
 
-import SVG
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 import java.io.File
@@ -130,7 +129,7 @@ suspend fun ModelFactory.makePartitions(precision: Double = 0.001, timeBound: Do
     val output = File("/Users/daemontus/Downloads/test.svg")
     val multiplier = 100.0
     val shift = 0.0//400.0
-    val image = SVG(1000.0, 1000.0) {
+    /*val image = SVG(1000.0, 1000.0) {
         safe.forEach {
             addRectangle(it.x1 * multiplier + shift, it.y1 * multiplier + shift, it.x2 * multiplier + shift, it.y2 * multiplier + shift, fill = 0.0)
         }
@@ -140,7 +139,7 @@ suspend fun ModelFactory.makePartitions(precision: Double = 0.001, timeBound: Do
         /*unsafe.forEach { (it, p) ->
             addRectangle(it.x1 * multiplier, it.y1 * multiplier, it.x2 * multiplier, it.y2 * multiplier, fill = (p?.cardinality ?: 0.0) / solver.TT.cardinality)
         }*/
-    }
+    }*/
 
     /*unsafe.forEach { t, u ->
         /*if (t.y1 > 0.0) {
@@ -148,7 +147,7 @@ suspend fun ModelFactory.makePartitions(precision: Double = 0.001, timeBound: Do
         println("$t: $u (${(u?.cardinality ?: 0.0) / solver.TT.cardinality})")
     }*/
 
-    output.writeText(image)
+    //output.writeText(image)
 }
 
 suspend fun ModelFactory.splitByZero(volumeThreshold: Double, precision: Double): Pair<List<Rect>, List<Rect>> {
