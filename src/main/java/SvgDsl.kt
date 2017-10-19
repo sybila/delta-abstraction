@@ -1,191 +1,10 @@
 
-import Dimension.X
-import Dimension.Y
-import com.github.sybila.ode.generator.NodeEncoder
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.Parser
-import java.io.BufferedWriter
+import svg.PwmaImage
 import java.io.File
-
-enum class Dimension { X, Y }
-
-data class Point(val x: Double, val y: Double) {
-
-    operator fun plus(other: Point) = Point(x + other.x, y + other.y)
-
-    operator fun times(num: Double) = Point(x * num, y * num)
-
-    fun flipY(height: Double) = Point(x, height - y)
-
-}
-
-data class Style(val properties: Map<String, String>) {
-    companion object {
-        val DEFAULT = Style(emptyMap())
-        val STROKE = Style(mapOf("stroke-width" to "1", "stroke" to "black", "fill" to "transparent"))
-        val FILL = Style(mapOf("fill" to "black"))
-    }
-
-    fun compileAttributes(): String = buildString {
-        for ((key, value) in properties) {
-            append("$key=\"$value\" ")
-        }
-    }
-}
-
-data class Rectangle(val bottom: Point, val top: Point, val style: Style = Style.DEFAULT) {
-
-    val width: Double
-        get() = top.x - bottom.x
-
-    val height: Double
-        get() = top.y - bottom.y
-
-    fun getEdge(d: Dimension, up: Boolean): Pair<Point, Point> = when {
-        d == X && !up -> bottom to top.copy(x = bottom.x)
-        d == X && up -> bottom.copy(x = top.x) to top
-        d == Y && !up -> bottom to top.copy(y = bottom.y)
-        d == Y && up -> bottom.copy(y = top.y) to top
-        else -> error("unreachable")
-    }
-
-    val center: Point
-        get() = middle(bottom, top)
-
-    fun writeSVG(writer: BufferedWriter) = writer.run {
-        appendln("<rect x=\"${bottom.x}\" y=\"${bottom.y}\" width=\"${top.x - bottom.x}\" height=\"${top.y - bottom.y}\" ${style.compileAttributes()}/>")
-    }
-
-    inline fun map(action: (Point) -> Point): Rectangle = Rectangle(action(bottom), action(top), style)
-
-    fun flipY(height: Double): Rectangle {
-        val bY = bottom.y
-        val tY = top.y
-        return copy(bottom = bottom.copy(y = height - tY), top = top.copy(y = height - bY))
-    }
-
-}
-
-data class Circle(
-        override val center: Point,
-        val radius: Double,
-        override val style: Style
-) : SvgPrimitive<Circle> {
-
-    val up: Point
-        get() = center + Point(0.0, radius)
-
-    val down: Point
-        get() = center + Point(0.0, -radius)
-
-    val left: Point
-        get() = center + Point(-radius, 0.0)
-
-    val right: Point
-        get() = center + Point(radius, 0.0)
-
-    override fun compileSvg(): String =
-            """<circle cx="${center.x}" cy="${center.y}" r="$radius" ${style.compileAttributes()} />"""
-
-    override fun scale(factor: Double): Circle =
-            copy(center = center * factor, radius = radius * factor)
-
-    override fun flipY(height: Double): Circle =
-            copy(center = center.flipY(height))
-
-    override fun translate(delta: Point): Circle =
-            copy(center = center + delta)
-}
-
-data class CircleOld(val middle: Point, val radius: Double, val style: Style = Style.DEFAULT) {
-
-    fun getBoundaryPoint(d: Dimension, up: Boolean): Point = when (d) {
-        X -> middle.copy(x = middle.x + if (up) radius else -radius)
-        Y -> middle.copy(y = middle.y + if (up) radius else -radius)
-    }
-
-    fun writeSVG(writer: BufferedWriter) = writer.run {
-        appendln("<circle cx=\"${middle.x}\" cy=\"${middle.y}\" r=\"$radius\" ${style.compileAttributes()}/>")
-    }
-
-    fun flipY(height: Double): Circle {
-        val newY = middle.y
-        return copy(middle = middle.copy(y = newY))
-    }
-
-}
-
-data class Arrow(val start: Point, val stop: Point, val style: Style = Style.DEFAULT) {
-
-    fun writeSVG(writer: BufferedWriter) = writer.run {
-        appendln("<line x1=\"${start.x}\" y1=\"${start.y}\" x2=\"${stop.x}\" y2=\"${stop.y}\" marker-end=\"url(#arrow)\" ${style.compileAttributes()} />")
-    }
-
-}
-
-interface SvgPrimitive<P : SvgPrimitive<P>> {
-
-    /**
-     * Style properties of this primitive.
-     */
-    val style: Style
-
-    /**
-     * Geometrically central point of this structure.
-     */
-    val center: Point
-
-    /**
-     * Compile this primitive into a set of svg elements which can directly used within the result file.
-     */
-    fun compileSvg(): String
-
-    /**
-     * Resize this object using [0,0] as the center of resizing.
-     */
-    fun scale(factor: Double): P
-
-    /**
-     * Move this object by [delta].
-     */
-    fun translate(delta: Point): P
-
-    /**
-     * Flip the object with respect to the given height.
-     * This is useful for inverting the Y axis to resemble scientific coordinate systems.
-     */
-    fun flipY(height: Double): P
-
-}
-
-fun xy(x: Double, y: Double) = Point(x,y)
-
-fun middle(a: Point, b: Point) = Point((a.x + b.x) / 2.0,(a.y + b.y) / 2.0)
-
-fun Pair<Double, Double>.toPoint() = Point(first, second)
-
-fun Pair<Point, Point>.middle(): Point = middle(first, second)
-
-fun Pair<Point, Point>.lowThird(): Point = Point(
-        (this.first.x + this.second.x) / 3.0,
-        (this.first.y + this.second.y) / 3.0
-)
-
-fun Pair<Point, Point>.highThird(): Point = Point(
-        ((this.first.x + this.second.x) / 3.0) * 2.0,
-        ((this.first.y + this.second.y)) / 3.0 * 2.0
-)
-
-data class SVG_Image(
-        val rectangles: List<Rectangle>,
-        val circle: List<Circle>,
-        val arrow: List<Arrow>
-)
-
-data class PWMA_Image(
-        val model: RectangleOdeModel,
-        val property: Map<String, Set<Int>>
-)
+/*
+fun middle(a: Point, b: Point) = Point((a.x + b.x) / 2.0, (a.y + b.y) / 2.0)
 
 data class PWMA_StateSpace(
         val states: List<Rectangle>,
@@ -237,28 +56,28 @@ data class PWMA_StateSpace(
         val states = this@PWMA_StateSpace.states.map { it.toState() }
         val transitions = this@PWMA_StateSpace.transitions.map { (from, to) ->
             when {
-                from.getEdge(X, true) == to.getEdge(X, false) -> Arrow(
-                        from.toState().getBoundaryPoint(X, true),
-                        to.toState().getBoundaryPoint(X, false), Style.STROKE
+                from.getEdge(X, true) == to.getEdge(X, false) -> Line(
+                        from.toState().anchor(X, true),
+                        to.toState().anchor(X, false), Style.STROKE
                 )
-                from.getEdge(X, false) == to.getEdge(X, true) -> Arrow(
-                        from.toState().getBoundaryPoint(X, false),
-                        to.toState().getBoundaryPoint(X, true), Style.STROKE
+                from.getEdge(X, false) == to.getEdge(X, true) -> Line(
+                        from.toState().anchor(X, false),
+                        to.toState().anchor(X, true), Style.STROKE
                 )
-                from.getEdge(Y, true) == to.getEdge(Y, false) -> Arrow(
-                        from.toState().getBoundaryPoint(Y, false),
-                        to.toState().getBoundaryPoint(Y, true), Style.STROKE
+                from.getEdge(Y, true) == to.getEdge(Y, false) -> Line(
+                        from.toState().anchor(Y, false),
+                        to.toState().anchor(Y, true), Style.STROKE
                 )
-                from.getEdge(Y, false) == to.getEdge(Y, true) -> Arrow(
-                        from.toState().getBoundaryPoint(Y, true),
-                        to.toState().getBoundaryPoint(Y, false), Style.STROKE
+                from.getEdge(Y, false) == to.getEdge(Y, true) -> Line(
+                        from.toState().anchor(Y, true),
+                        to.toState().anchor(Y, false), Style.STROKE
                 )
                 else -> null
             }
         }.filterNotNull()
 
         states.forEach {
-            it.writeSVG(this)
+            appendln(it.compileSvg())
         }
 
         transitions.forEach {
@@ -272,7 +91,7 @@ data class PWMA_StateSpace(
         appendln("</svg>")
     }
 
-}
+}*/
 
 inline fun SVG(width: Double, height: Double, builder: SvgBuilder.() -> Unit): String {
     return SvgBuilder(width, height).apply(builder).build()
@@ -302,73 +121,40 @@ ${items.joinToString(separator = "\n")}
 fun main(args: Array<String>) {
     val input = File("/Users/daemontus/Downloads/test.bio")
     val f = File("/Users/daemontus/Downloads/test.svg")
-    val thresholds = (0..50).map { it / 5.0 }
+    val thresholds = (0..40).map { it / 4.0 }
     val model = Parser().parse(input).let { m ->
         m.copy(variables = m.variables.map { v ->
             v.copy(thresholds = thresholds)
         })
     }
 
-    //.computeApproximation(cutToRange = true)
     val ts = RectangleOdeModel(model, createSelfLoops = true)
     ts.run {
-        val encoder = NodeEncoder(model)
-        val states = (0 until stateCount).map { s ->
-            Rectangle(
-                    xy( model.variables[0].thresholds[encoder.lowerThreshold(s, 0)],
-                        model.variables[1].thresholds[encoder.lowerThreshold(s, 1)]
-                    ),
-                    xy( model.variables[0].thresholds[encoder.upperThreshold(s, 0)],
-                        model.variables[1].thresholds[encoder.upperThreshold(s, 1)]
-                    )
-            )
-        }
-        val transitions = (0 until stateCount).flatMap { s ->
-            //println("$s: " + s.successors(true).asSequence().map { it.target }.toList())
-            s.successors(true).asSequence().map {
-                PWMA_StateSpace.Transition(states[s], states[it.target])
-            }.toList()
-        }
-        val attractor = HashSet<Int>()
-        for (s in (0 until stateCount)) {
-            println(s)
-            //bind s : AG EF s = ! EF ! EF s
-            if (s in invert(fixedPoint(invert(fixedPoint(setOf(s)))))) {
-                attractor.add(s)
-            }
-        }
-        println("Attr: $attractor")
-        f.bufferedWriter().use {
-            PWMA_StateSpace(states, transitions, attractor.toList().map { states[it] }).writeSVG(it, targetWidth = 1000.0)
+        val stable = (0 until stateCount).filter {
+            println("Check stable $it")
+            it in invert(backwards(invert(backwards(setOf(it)))))
+        }.toSet()
+        val c1: Int = stable.first()
+        val c2: Int = stable.first { c1 !in backwards(setOf(it)) }
+        val r1 = backwards(setOf(c1))
+        val r2 = backwards(setOf(c2))
+        val and = r1 - (r1 - r2)
+        f.bufferedWriter().use { writer ->
+            PwmaImage(model, ts, mapOf(
+                    "#ff0000" to stable,
+                    "#00ff00" to r1,
+                    "#0000ff" to r2,
+                    "#00ffff" to and
+                    )).toSvgImage().normalize(1000.0).writeTo(writer)
         }
     }
-    /*
-    val dd = Rectangle(xy(-1.0, -1.0), xy(0.0, 0.0), Style.STROKE)
-    val dh = Rectangle(xy(0.0, -1.0), xy(1.0, 0.0), Style.STROKE)
-    val hd = Rectangle(xy(-1.0, 0.0), xy(0.0, 1.0), Style.STROKE)
-    val hh = Rectangle(xy(0.0, 0.0), xy(1.0, 1.0), Style.STROKE)
-    val system = PWMA_StateSpace(
-            /*(-5..5).flatMap { x ->
-                (-3..4).map { y ->
-                    Rectangle(xy(x.toDouble(), y.toDouble()), xy(x + 1.0, y + 1.0), Style.STROKE)
-                }
-            }*/
-            listOf(dd, dh, hd, hh), listOf(
-                PWMA_StateSpace.Transition(dd, dh),
-                PWMA_StateSpace.Transition(dd, dd),
-                PWMA_StateSpace.Transition(hh, hd),
-                PWMA_StateSpace.Transition(dd, hd),
-                PWMA_StateSpace.Transition(hd, dd),
-                PWMA_StateSpace.Transition(hh, dh)
-            )
-    )*/
 }
 
-fun RectangleOdeModel.fixedPoint(input: Set<Int>): Set<Int> {
+fun RectangleOdeModel.backwards(input: Set<Int>): Set<Int> {
     var iteration = input
     do {
         val old = iteration
-        iteration = iteration + iteration.flatMap { it.successors(false).asSequence().map { it.target }.toList() }.toSet()
+        iteration += iteration.flatMap { it.successors(false).asSequence().map { it.target }.toList() }.toSet()
     } while (old.toList().sorted() != iteration.toList().sorted())
     return iteration
 }
