@@ -2,6 +2,7 @@
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.Parser
 import dreal.DeltaModel
+import dreal.State
 import dreal.State.Interior
 import svg.DeltaImage
 import java.io.File
@@ -40,8 +41,26 @@ fun main(args: Array<String>) {
             Interior(0),
             Interior(10),
             Interior(200),
-            Interior(280)
-    ), emptyMap())
+            Interior(280),
+            State.Transition(10,11),
+            State.Transition(11,10),
+            State.Transition(10,9),
+            State.Transition(10,50),
+            State.Transition(50,10),
+            State.Transition(10, null),
+            State.Transition(null, 10),
+            State.Transition(null, 0),
+            State.Transition(0, null),
+            State.Transition(null, 1599),
+            State.Transition(1599, null),
+            State.Transition(null, 39),
+            State.Transition(39, null),
+            State.Transition(null, 1560),
+            State.Transition(1560, null)
+    ), mapOf(
+            State.Transition(null, 10) to listOf(State.Transition(10, 11), State.Transition(10, 50)),
+            State.Transition(11, 10) to listOf(State.Transition(10, null), State.Interior(10))
+    ))
     f.bufferedWriter().use { writer ->
         DeltaImage(model, delta, emptyMap()).toSvgImage().normalize(1000.0).writeTo(writer)
     }
