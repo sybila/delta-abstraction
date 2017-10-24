@@ -1,8 +1,5 @@
 package dreal
 
-import com.github.sybila.ode.model.Hill
-import com.github.sybila.ode.model.OdeModel
-
 /**
  * A model with two dimensions and one parameter
  */
@@ -30,7 +27,6 @@ interface ModelFactory {
 """
 (declare-fun $x$suffix () Real [${dimensionBounds(0).let { (l, h) -> "$l, $h" }}])
 (declare-fun $y$suffix () Real [${dimensionBounds(1).let { (l, h) -> "$l, $h" }}])
-(declare-fun $p$suffix () Real [${dimensionBounds(2).let { (l, h) -> "$l, $h" }}])
 """.trim()
 
     fun makeEqulibrium(): String =

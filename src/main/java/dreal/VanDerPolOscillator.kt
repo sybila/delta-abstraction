@@ -11,7 +11,7 @@ object VanDerPolOscillator : ModelFactory {
 
     override fun makeModelEquation(i: Int, names: List<String>): String = when (i) {
         0 -> y
-        1 -> "(- (* $y $p (- 1 (* $x $x))) $x)"
+        1 -> "(- (* $y 1.5 (- 1 (* $x $x))) $x)"
         2 -> "0"
         else -> unknownDimension(i)
     }

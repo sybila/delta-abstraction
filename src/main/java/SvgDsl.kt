@@ -1,8 +1,7 @@
 
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.Parser
-import dreal.G1Sswitch
-import dreal.makeDeltaAbstraction
+import dreal.*
 import kotlinx.coroutines.experimental.runBlocking
 import svg.DeltaImage
 import java.io.File
@@ -10,7 +9,8 @@ import java.io.File
 fun main(args: Array<String>) {
     val input = File("/Users/daemontus/Downloads/test.bio")
     val f = File("/Users/daemontus/Downloads/test.svg")
-    val thresholds = (0..10).map { it / 1.0 }
+    //val thresholds = (-10..10).map { it / 2.0 }
+    val thresholds = (0..30).map { it / 3.0 }
     val model = Parser().parse(input).let { m ->
         m.copy(variables = m.variables.map { v ->
             v.copy(thresholds = thresholds)
@@ -63,9 +63,21 @@ fun main(args: Array<String>) {
     ))*/
     f.bufferedWriter().use { writer ->
         runBlocking {
-            DeltaImage(model, model.makeDeltaAbstraction(G1Sswitch), emptyMap()).toSvgImage().normalize(1000.0).writeTo(writer)
+            val abs = model.makeDeltaAbstraction(G1Sswitch)
+            val reach = abs.forward(setOf(State.Interior(FIND)))
+            DeltaImage(model, abs, reach).toSvgImage().normalize(1000.0).writeTo(writer)
         }
     }
+}
+
+fun DeltaModel.forward(from: Set<State>): Set<State> {
+    var iteration = from
+    do {
+        val old = iteration
+        iteration += iteration.flatMap { transitions[it] ?: emptyList() }.toSet()
+        println(iteration)
+    } while (old != iteration)
+    return iteration
 }
 
 fun RectangleOdeModel.backwards(input: Set<Int>): Set<Int> {

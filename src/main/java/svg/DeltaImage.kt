@@ -3,13 +3,14 @@ package svg
 import com.github.sybila.ode.generator.NodeEncoder
 import com.github.sybila.ode.model.OdeModel
 import dreal.DeltaModel
+import dreal.FIND
 import dreal.State
 import kotlin.coroutines.experimental.buildSequence
 
 data class DeltaImage(
         val ode: OdeModel,
         val model: DeltaModel,
-        val properties: Map<String, Set<State>>
+        val property: Set<State>
 ) {
 
     fun toSvgImage(): SvgImage {
@@ -78,7 +79,7 @@ data class DeltaImage(
 
         // Set arrow size as 1/10th of average rectangle size in X dimension.
         val boundsX = tX.dropLast(1).zip(tX.drop(1))
-        val arrowSize = boundsX.map { (l, h) -> h - l }.average() / 10.0
+        val arrowSize = boundsX.map { (l, h) -> h - l }.average() / 5.0
 
         // Draw rectangular grid.
         val gridX = tX.map { x ->
@@ -97,15 +98,16 @@ data class DeltaImage(
                     val rectangleHeight = tY[y+1] - tY[y]
                     Circle( center = xy(tX[x] + rectangleWidth / 2.0, tY[y] + rectangleHeight / 2.0),
                             radius = Math.min(rectangleWidth, rectangleHeight) / 8.0,
-                            style = Style.STROKE
+                            style = Style.STROKE.fillColor(if (s in property) "#ff0000" else "#000000")
                     )
                 }
                 is State.Transition -> when {
-                    State.Transition(s.to, s.from) !in model.states ->
+                    State.Transition(s.to, s.from) !in model.states -> {
                         // There's going to be just one state on that edge, so we're good.
                         Circle( center = s.findAnchorPoint(), radius = s.findStateSize(),
-                                style = Style.STROKE.fillColor("#ffffff")
+                                style = Style.STROKE.fillColor(if (s in property) "#ff0000" else if (s.from == FIND || s.to == FIND) "#000000" else "#ffffff")
                         )
+                    }
                     else -> {
                         // There are two states, so we have to place them on the secondary anchors.
                         val stateAnchor = s.findAnchorPoint()
@@ -119,7 +121,7 @@ data class DeltaImage(
                         val candidates = encoder.makeRectangle(s.from ?: s.to!!).secondaryAnchors
                                 .sortedBy { it.distanceTo(stateAnchor) }.take(2).sorted().toList()
                         Circle( center = candidates[index], radius = s.findStateSize(),
-                                style = Style.STROKE.fillColor("#ffffff")
+                                style = Style.STROKE.fillColor(if (s in property) "#ff0000" else if (s.from == FIND || s.to == FIND) "#000000" else "#ffffff")
                         )
                     }
                 }
