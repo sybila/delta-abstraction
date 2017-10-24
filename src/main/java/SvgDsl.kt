@@ -1,16 +1,14 @@
 
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.Parser
-import dreal.DeltaModel
-import dreal.State
-import dreal.State.Interior
+import dreal.makeDeltaAbstraction
 import svg.DeltaImage
 import java.io.File
 
 fun main(args: Array<String>) {
     val input = File("/Users/daemontus/Downloads/test.bio")
     val f = File("/Users/daemontus/Downloads/test.svg")
-    val thresholds = (0..40).map { it / 4.0 }
+    val thresholds = (0..10).map { it / 1.0 }
     val model = Parser().parse(input).let { m ->
         m.copy(variables = m.variables.map { v ->
             v.copy(thresholds = thresholds)
@@ -37,7 +35,7 @@ fun main(args: Array<String>) {
                     )).toSvgImage().normalize(1000.0).writeTo(writer)
         }
     }*/
-    val delta = DeltaModel(listOf(
+    /*val delta = DeltaModel(listOf(
             Interior(0),
             Interior(10),
             Interior(200),
@@ -60,9 +58,9 @@ fun main(args: Array<String>) {
     ), mapOf(
             State.Transition(null, 10) to listOf(State.Transition(10, 11), State.Transition(10, 50)),
             State.Transition(11, 10) to listOf(State.Transition(10, null), State.Interior(10))
-    ))
+    ))*/
     f.bufferedWriter().use { writer ->
-        DeltaImage(model, delta, emptyMap()).toSvgImage().normalize(1000.0).writeTo(writer)
+        DeltaImage(model, model.makeDeltaAbstraction(), emptyMap()).toSvgImage().normalize(1000.0).writeTo(writer)
     }
 }
 

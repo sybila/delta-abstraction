@@ -78,7 +78,7 @@ data class DeltaImage(
 
         // Set arrow size as 1/10th of average rectangle size in X dimension.
         val boundsX = tX.dropLast(1).zip(tX.drop(1))
-        val arrowSize = boundsX.map { (l, h) -> h - l }.average() / 5.0
+        val arrowSize = boundsX.map { (l, h) -> h - l }.average() / 10.0
 
         // Draw rectangular grid.
         val gridX = tX.map { x ->
