@@ -1,5 +1,8 @@
 package dreal
 
+import com.github.sybila.ode.model.Hill
+import com.github.sybila.ode.model.OdeModel
+
 /**
  * A model with two dimensions and one parameter
  */
@@ -56,3 +59,21 @@ interface ModelFactory {
     fun unknownDimension(i: Int): Nothing = error("svg.Dimension $i does not exist in $this")
 
 }
+/*
+fun OdeModel.toModelFactory() = object : ModelFactory {
+
+    override val names: List<String> = this@toModelFactory.variables.map { it.name }
+
+    override fun makeModelEquation(i: Int, names: List<String>): String {
+        val eq = this@toModelFactory.variables[i].equation
+        eq.map {
+            if (it.paramIndex != -1) error("Models with parameters not supported")
+            it.evaluable.map {
+                if (it !is Hill) error("Only hill evaluables are supported")
+
+            }
+        }
+    }
+
+    override fun dimensionBounds(i: Int): Pair<Double, Double> = this@toModelFactory.variables[i].range
+}*/

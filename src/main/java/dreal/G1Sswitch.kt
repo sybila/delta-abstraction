@@ -10,7 +10,7 @@ object G1Sswitch : ModelFactory {
 
 
     override fun makeModelEquation(i: Int, names: List<String>): String = when (i) {
-        0 -> "(- (* ${HillP(y, "0.5")} ${HillN(x, "0.5")}) (* $p $x))"
+        0 -> "(- (* ${HillP(y, "0.5")} ${HillN(x, "0.5")}) (* 0.012 $x))"
         1 -> {
             val xN = HillN(x, "5")
             "(- (+ (0.05) (* (0.00016) ${HillN("(* $y $y)", "16")} $xN) (* (1.6) ${HillP("(* $y $y)", "16")} $xN)) (* 0.1 $y))"

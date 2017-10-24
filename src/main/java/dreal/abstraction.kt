@@ -2,6 +2,7 @@ package dreal
 
 import com.github.sybila.ode.generator.NodeEncoder
 import com.github.sybila.ode.model.OdeModel
+import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.runBlocking
 import kotlin.coroutines.experimental.buildSequence
 
@@ -11,9 +12,12 @@ fun main(args: Array<String>) {
     }
 }
 
-fun OdeModel.makeDeltaAbstraction(): DeltaModel {
+suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaModel {
 
     val encoder = NodeEncoder(this)
+
+    val tX = this.variables[0].thresholds
+    val tY = this.variables[1].thresholds
 
     val states = buildSequence {
         // exterior state
@@ -62,10 +66,62 @@ fun OdeModel.makeDeltaAbstraction(): DeltaModel {
 
     // check state admissibility
     val admissibleStates = states.map { s ->
-        s to
-    }
+        s to async(pool) {
+            if (s !is State.Transition || s.from == null || s.to == null) {
+                true
+            } else {
+                val inequality = when {
+                    encoder.upperThreshold(s.from, 0) == encoder.lowerThreshold(s.to, 0) -> {
+                        // X dim aligned, upper facet
+                        val eq = modelFactory.makeModelEquation(0)
+                                .replace("x", tX[encoder.upperThreshold(s.from, 0)].toString())
+                        """
+                        (declare-fun y Real () [${tY[encoder.lowerThreshold(s.from, 1)]}, ${tY[encoder.upperThreshold(s.from, 1)]}])
+                        (assert (<= 0.0 $eq))
+                        """
+                    }
+                    encoder.lowerThreshold(s.from, 0) == encoder.upperThreshold(s.to, 0) -> {
+                        // X dim aligned, lower facet
+                        val eq = modelFactory.makeModelEquation(0)
+                                .replace("x", tX[encoder.lowerThreshold(s.from, 0)].toString())
+                        """
+                        (declare-fun y Real () [${tY[encoder.lowerThreshold(s.from, 1)]}, ${tY[encoder.upperThreshold(s.from, 1)]}])
+                        (assert (>= 0.0 $eq))
+                        """
+                    }
+                    encoder.upperThreshold(s.from, 1) == encoder.lowerThreshold(s.to, 1) -> {
+                        // Y dim aligned, upper facet
+                        val eq = modelFactory.makeModelEquation(0)
+                                .replace("y", tY[encoder.upperThreshold(s.from, 0)].toString())
+                        """
+                        (declare-fun y Real () [${tX[encoder.lowerThreshold(s.from, 0)]}, ${tX[encoder.upperThreshold(s.from, 0)]}])
+                        (assert (<= 0.0 $eq))
+                        """
+                    }
+                    encoder.lowerThreshold(s.from, 0) == encoder.upperThreshold(s.to, 0) -> {
+                        // Y dim aligned, lower facet
+                        val eq = modelFactory.makeModelEquation(0)
+                                .replace("y", tY[encoder.lowerThreshold(s.from, 0)].toString())
+                        """
+                        (declare-fun x Real () [${tX[encoder.lowerThreshold(s.from, 0)]}, ${tX[encoder.upperThreshold(s.from, 0)]}])
+                        (assert (>= 0.0 $eq))
+                        """
+                    }
+                    else -> ""
+                }
+                val query = makeQuery(inequality)
+                try {
+                    !checkNotSat(query)
+                } catch (e: Exception) {
+                    println(query)
+                    throw e
+                }
+            }
+        }
+    }.filter { it.also { println(it.first) }.second.await() }.map { it.first }
 
 
-    return DeltaModel(states, (enteringSystem + exitingInterior + exitingEdge).toMap())
+    //return DeltaModel(states, (enteringSystem + exitingInterior + exitingEdge).toMap())
+    return DeltaModel(admissibleStates, emptyMap())
 }
 

@@ -1,7 +1,9 @@
 
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.Parser
+import dreal.G1Sswitch
 import dreal.makeDeltaAbstraction
+import kotlinx.coroutines.experimental.runBlocking
 import svg.DeltaImage
 import java.io.File
 
@@ -60,7 +62,9 @@ fun main(args: Array<String>) {
             State.Transition(11, 10) to listOf(State.Transition(10, null), State.Interior(10))
     ))*/
     f.bufferedWriter().use { writer ->
-        DeltaImage(model, model.makeDeltaAbstraction(), emptyMap()).toSvgImage().normalize(1000.0).writeTo(writer)
+        runBlocking {
+            DeltaImage(model, model.makeDeltaAbstraction(G1Sswitch), emptyMap()).toSvgImage().normalize(1000.0).writeTo(writer)
+        }
     }
 }
 
