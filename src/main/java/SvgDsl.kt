@@ -1,16 +1,19 @@
 
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.Parser
-import dreal.*
+import dreal.DeltaModel
+import dreal.State
+import dreal.VanDerPolOscillator
+import dreal.makeDeltaAbstraction
 import kotlinx.coroutines.experimental.runBlocking
 import svg.DeltaImage
 import java.io.File
 
 fun main(args: Array<String>) {
-    val input = File("/Users/daemontus/Downloads/test.bio")
+    val input = File("/Users/daemontus/Downloads/pol.bio")
     val f = File("/Users/daemontus/Downloads/test.svg")
-    //val thresholds = (-10..10).map { it / 2.0 }
-    val thresholds = (0..30).map { it / 3.0 }
+    val thresholds = (-20..20).map { it / 2.0 }
+    //val thresholds = (0..50).map { it / 5.0 }
     val model = Parser().parse(input).let { m ->
         m.copy(variables = m.variables.map { v ->
             v.copy(thresholds = thresholds)
@@ -63,8 +66,11 @@ fun main(args: Array<String>) {
     ))*/
     f.bufferedWriter().use { writer ->
         runBlocking {
-            val abs = model.makeDeltaAbstraction(G1Sswitch)
-            val reach = abs.forward(setOf(State.Interior(FIND)))
+            val abs = model.makeDeltaAbstraction(VanDerPolOscillator)
+            //val reach = abs.forward(setOf(State.Transition(50, 51)))
+            val reach = abs.forward(setOf(State.Transition(1, 0)))
+            //val one = abs.backward(setOf(State.Interior(173)))
+            //val two = abs.backward(setOf(State.Interior(1229)))
             DeltaImage(model, abs, reach).toSvgImage().normalize(1000.0).writeTo(writer)
         }
     }
@@ -76,6 +82,16 @@ fun DeltaModel.forward(from: Set<State>): Set<State> {
         val old = iteration
         iteration += iteration.flatMap { transitions[it] ?: emptyList() }.toSet()
         println(iteration)
+    } while (old != iteration)
+    return iteration
+}
+
+fun DeltaModel.backward(from: Set<State>): Set<State> {
+    val tInverted: Map<State, List<State>> = transitions.flatMap { (s, succ) -> succ.map { it to s } }.groupBy({ it.first }, { it.second })
+    var iteration = from
+    do {
+        val old = iteration
+        iteration += iteration.flatMap { tInverted[it] ?: emptyList() }.toSet()
     } while (old != iteration)
     return iteration
 }

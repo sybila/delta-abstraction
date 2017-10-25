@@ -4,6 +4,8 @@ import com.github.sybila.ode.generator.NodeEncoder
 import com.github.sybila.ode.model.OdeModel
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.runBlocking
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.experimental.buildSequence
 
 fun main(args: Array<String>) {
@@ -12,7 +14,7 @@ fun main(args: Array<String>) {
     }
 }
 
-val FIND = 74
+val FIND = 48
 
 suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaModel {
 
@@ -66,13 +68,18 @@ suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaMode
 
     val transitions = (enteringSystem + exitingInterior + exitingEdge).toMap()
 
-    val timeBound = 100
+    val timeBound = 5
+
+    val safety = HashMap<State.Interior, Int>()
+
+    val longest = AtomicLong(0L)
+    val longestQuery = AtomicReference<String?>(null)
 
     // check state admissibility
     val admissibleStates = states.map { s ->
         s to async(pool) {
             if (s is State.Interior) {
-                (1..timeBound).step(18).all { t ->
+                (1..timeBound).step(1).all { t ->
                     val r = Rect(
                             tX[encoder.lowerThreshold(s.rectangle, 0)] to tX[encoder.upperThreshold(s.rectangle, 0)],
                             tY[encoder.lowerThreshold(s.rectangle, 1)] to tY[encoder.upperThreshold(s.rectangle, 1)]
@@ -92,9 +99,21 @@ suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaMode
                         (assert (forall_t 1 [0 time] (and (< x_0_t ${r.x2}) (> x_0_t ${r.x1}) (< y_0_t ${r.y2}) (> y_0_t ${r.y1}))))
                     """
                         )
+                        //if (s.rectangle == FIND) println(flowQuery)
                         try {
+                            val start = System.currentTimeMillis()
                             !checkNotSat(flowQuery).also {
                                 println("time: $t is $it")
+                                if (it) safety[s] = t
+                                if (it) {
+                                    val duration = System.currentTimeMillis() - start
+                                    val previous = longest.get()
+                                    if (duration > previous) {
+                                        if (longest.compareAndSet(previous, duration)) {
+                                            longestQuery.set(flowQuery)
+                                        }
+                                    }
+                                }
                             }
                         } catch (e: Exception) {
                             println(flowQuery)
@@ -103,7 +122,7 @@ suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaMode
                     }
                 }
             } else if (s !is State.Transition || s.from == null || s.to == null) {
-                true
+                false // Disable exterior for now, because we don't check transitions there. //true
             } else {
                 val inequality = when {
                     encoder.upperThreshold(s.from, 0) == encoder.lowerThreshold(s.to, 0) -> {
@@ -146,7 +165,7 @@ suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaMode
                 }
                 val query = makeQuery(inequality)
                 //if ((s.from == 122 || s.to == 122) && inequality.isEmpty()) println("Empty for $s")
-                if (s.from == FIND || s.to == FIND) println(query)
+                //if (s.from == FIND || s.to == FIND) println(query)
                 try {
                     !checkNotSat(query)
                 } catch (e: Exception) {
@@ -157,43 +176,50 @@ suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaMode
         }
     }.filter { it.also { println(it.first) }.second.await() }.map { it.first }
 
+    println("LONGEST QUERY:")
+    println(longestQuery.get() ?: "")
+
     val admissibleTransitions = transitions.filterKeys { it in admissibleStates }.mapValues { (_, succ) ->
         succ.filter { it in admissibleStates }
     }
 
     println("REMOVING USELESS TRANSITIONS")
 
-    val actuallyReachable = admissibleTransitions.mapValues { (s, succ) ->
-        if (s is State.Transition && s.from != null && s.to != null) {
+    val actuallyReachable = admissibleTransitions.toList().map { (s, succ) ->
+        s to async(pool) { if (s is State.Transition && s.from != null && s.to != null) {
             if (State.Interior(s.to) !in admissibleStates) {
                 succ.filter { dest ->
                     dest !is State.Transition || dest.from == null || dest.to == null || kotlin.run {
                         modelFactory.run {
-                            val reachQuery = makeQuery("""
+                            safety[State.Interior(s.to)]?.let { t ->
+                                val reachQuery = makeQuery("""
                                     ${makeHead()}
                                     ${makeHead("_0_0")}
                                     ${makeHead("_0_t")}
-                                    (declare-fun time () Real [0.0, $timeBound])
+                                    (declare-fun time () Real [0.0, $t])
                                     ${makeFixedFlow(0.012)}
                                     (assert (= [x_0_t y_0_t] (integral 0. time [x_0_0 y_0_0] flow_1)))
                                     (assert ${s.getBounds(tX, tY, encoder).replace("x", "x_0_0").replace("y", "y_0_0")})
                                     (assert ${dest.getBounds(tX, tY, encoder).replace("x", "x_0_t").replace("y", "y_0_t")})
                                 """)
-                            //TODO: Check that the trajectory is fully contained.
-                            try {
-                                !checkNotSat(reachQuery).also {
-                                    println("Transition allowed: ${!it}")
+                                //TODO: Check that the trajectory is fully contained.
+                                //if (s.to == FIND) println(reachQuery)
+                                try {
+                                    !checkNotSat(reachQuery)
+                                } catch (e: Exception) {
+                                    println(reachQuery)
+                                    throw e
                                 }
-                            } catch (e: Exception) {
-                                println(reachQuery)
-                                throw e
-                            }
+                            }?.also {
+                                println("Transition allowed: ${it}")
+                            } ?: error("Safety not found for ${s.to}")
                         }
                     }
                 }
             } else succ
         } else succ
-    }
+        }
+    }.map { it.first to it.second.await() }.toMap()
 
     //return DeltaModel(states, (enteringSystem + exitingInterior + exitingEdge).toMap())
     return DeltaModel(admissibleStates, actuallyReachable)
@@ -217,7 +243,7 @@ fun State.Transition.getBounds(tX: List<Double>, tY: List<Double>, encoder: Node
         }
         encoder.lowerThreshold(from, 1) == encoder.upperThreshold(to, 1) -> {
             // Y dim aligned, lower facet
-            "(and (= y ${tY[encoder.upperThreshold(from, 0)]}) (<= x ${tX[encoder.upperThreshold(from, 0)]}) (>= x ${tX[encoder.lowerThreshold(from, 0)]}))"
+            "(and (= y ${tY[encoder.lowerThreshold(from, 1)]}) (<= x ${tX[encoder.upperThreshold(from, 0)]}) (>= x ${tX[encoder.lowerThreshold(from, 0)]}))"
         }
         else -> error("Rectangles $from and $to not connected")
     }
