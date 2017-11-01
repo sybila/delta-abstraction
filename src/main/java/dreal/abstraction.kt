@@ -14,7 +14,7 @@ fun main(args: Array<String>) {
     }
 }
 
-val FIND = 48
+val FIND = 11
 
 suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaModel {
 
@@ -68,7 +68,7 @@ suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaMode
 
     val transitions = (enteringSystem + exitingInterior + exitingEdge).toMap()
 
-    val timeBound = 5
+    val timeBound = 2
 
     val safety = HashMap<State.Interior, Int>()
 
@@ -191,6 +191,45 @@ suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaMode
                 succ.filter { dest ->
                     dest !is State.Transition || dest.from == null || dest.to == null || kotlin.run {
                         modelFactory.run {
+                            val inequality = when {
+                                encoder.upperThreshold(s.from, 0) == encoder.lowerThreshold(s.to, 0) -> {
+                                    // X dim aligned, upper facet
+                                    val eq = modelFactory.makeModelEquation(0)
+                                            .replace("x", tX[encoder.upperThreshold(s.from, 0)].toString())
+                                    """
+                        (declare-fun y () Real [${tY[encoder.lowerThreshold(s.from, 1)]}, ${tY[encoder.upperThreshold(s.from, 1)]}])
+                        (assert (<= 0.0 $eq))
+                        """
+                                }
+                                encoder.lowerThreshold(s.from, 0) == encoder.upperThreshold(s.to, 0) -> {
+                                    // X dim aligned, lower facet
+                                    val eq = modelFactory.makeModelEquation(0)
+                                            .replace("x", tX[encoder.lowerThreshold(s.from, 0)].toString())
+                                    """
+                        (declare-fun y () Real [${tY[encoder.lowerThreshold(s.from, 1)]}, ${tY[encoder.upperThreshold(s.from, 1)]}])
+                        (assert (>= 0.0 $eq))
+                        """
+                                }
+                                encoder.upperThreshold(s.from, 1) == encoder.lowerThreshold(s.to, 1) -> {
+                                    // Y dim aligned, upper facet
+                                    val eq = modelFactory.makeModelEquation(1)
+                                            .replace("y", tY[encoder.upperThreshold(s.from, 1)].toString())
+                                    """
+                        (declare-fun x () Real [${tX[encoder.lowerThreshold(s.from, 0)]}, ${tX[encoder.upperThreshold(s.from, 0)]}])
+                        (assert (<= 0.0 $eq))
+                        """
+                                }
+                                encoder.lowerThreshold(s.from, 1) == encoder.upperThreshold(s.to, 1) -> {
+                                    // Y dim aligned, lower facet
+                                    val eq = modelFactory.makeModelEquation(1)
+                                            .replace("y", tY[encoder.lowerThreshold(s.from, 1)].toString())
+                                    """
+                        (declare-fun x () Real [${tX[encoder.lowerThreshold(s.from, 0)]}, ${tX[encoder.upperThreshold(s.from, 0)]}])
+                        (assert (>= 0.0 $eq))
+                        """
+                                }
+                                else -> ""
+                            }
                             safety[State.Interior(s.to)]?.let { t ->
                                 val reachQuery = makeQuery("""
                                     ${makeHead()}
@@ -199,11 +238,13 @@ suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaMode
                                     (declare-fun time () Real [0.0, $t])
                                     ${makeFixedFlow(0.012)}
                                     (assert (= [x_0_t y_0_t] (integral 0. time [x_0_0 y_0_0] flow_1)))
+                                    ${makeDerivationInequality(encoder, s, tX, tY, "_0_0")}
+                                    ${makeDerivationInequality(encoder, dest, tX, tY, "_0_t")}
                                     (assert ${s.getBounds(tX, tY, encoder).replace("x", "x_0_0").replace("y", "y_0_0")})
                                     (assert ${dest.getBounds(tX, tY, encoder).replace("x", "x_0_t").replace("y", "y_0_t")})
                                 """)
                                 //TODO: Check that the trajectory is fully contained.
-                                //if (s.to == FIND) println(reachQuery)
+                                if (s.to == 11 && s.from == 6 && dest.to == 12) println(reachQuery)
                                 try {
                                     !checkNotSat(reachQuery)
                                 } catch (e: Exception) {
@@ -223,6 +264,34 @@ suspend fun OdeModel.makeDeltaAbstraction(modelFactory: ModelFactory): DeltaMode
 
     //return DeltaModel(states, (enteringSystem + exitingInterior + exitingEdge).toMap())
     return DeltaModel(admissibleStates, actuallyReachable)
+}
+
+fun ModelFactory.makeDerivationInequality(encoder: NodeEncoder, s: State.Transition, tX: List<Double>, tY: List<Double>, suffix: String = ""): String {
+    if (s.from == null || s.to == null) error("Invalid state $s")
+    val names = this.names.map { "$it$suffix" }
+    return when {
+        encoder.upperThreshold(s.from, 0) == encoder.lowerThreshold(s.to, 0) -> {
+            // X dim aligned, upper facet
+            val eq = makeModelEquation(0, names).replace("x$suffix", tX[encoder.upperThreshold(s.from, 0)].toString())
+            """(assert (<= 0.0 $eq))"""
+        }
+        encoder.lowerThreshold(s.from, 0) == encoder.upperThreshold(s.to, 0) -> {
+            // X dim aligned, lower facet
+            val eq = makeModelEquation(0, names).replace("x$suffix", tX[encoder.lowerThreshold(s.from, 0)].toString())
+            """(assert (>= 0.0 $eq))"""
+        }
+        encoder.upperThreshold(s.from, 1) == encoder.lowerThreshold(s.to, 1) -> {
+            // Y dim aligned, upper facet
+            val eq = makeModelEquation(1, names).replace("y$suffix", tY[encoder.upperThreshold(s.from, 1)].toString())
+            """(assert (<= 0.0 $eq))"""
+        }
+        encoder.lowerThreshold(s.from, 1) == encoder.upperThreshold(s.to, 1) -> {
+            // Y dim aligned, lower facet
+            val eq = makeModelEquation(1, names).replace("y$suffix", tY[encoder.lowerThreshold(s.from, 1)].toString())
+            """(assert (>= 0.0 $eq))"""
+        }
+        else -> ""
+    }
 }
 
 fun State.Transition.getBounds(tX: List<Double>, tY: List<Double>, encoder: NodeEncoder): String {

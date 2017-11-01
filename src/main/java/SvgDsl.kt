@@ -12,11 +12,13 @@ import java.io.File
 fun main(args: Array<String>) {
     val input = File("/Users/daemontus/Downloads/pol.bio")
     val f = File("/Users/daemontus/Downloads/test.svg")
-    val thresholds = (-20..20).map { it / 2.0 }
+    //val thresholds = listOf(-0.4, -0.24, -0.08, 0.08, 0.24, 0.4)
+    val thresholdsX = (-20..20).map { it / 4.0 }
+    val thresholdsY = (-10..10).map { it / 2.0 }
     //val thresholds = (0..50).map { it / 5.0 }
     val model = Parser().parse(input).let { m ->
-        m.copy(variables = m.variables.map { v ->
-            v.copy(thresholds = thresholds)
+        m.copy(variables = m.variables.mapIndexed { i, v ->
+            v.copy(thresholds = if (i == 0) thresholdsX else thresholdsY)
         })
     }
 
