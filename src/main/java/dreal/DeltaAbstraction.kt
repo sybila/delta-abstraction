@@ -143,6 +143,7 @@ suspend fun DeltaModel.filterAdmissibleStates(tMax: Double): DeltaModel {
 ))
 (assert (${if (tPositive) "<" else ">" } 0 ${makeModelEquation(tDim, names = listOf("x_0_t", "y_0_t"))}))
 
+(assert (> time 0.001))
 
 ; WARNING: dReal is magic and these three asserts, while useless speed up the computation significantly!!
 (assert (forall_t 1 [0 time] (and
