@@ -61,11 +61,11 @@ sealed class State {
     /**
      * Abstract state representing the interior trajectories of given [rectangle].
      */
-    data class Interior(val rectangle: Int) : State()
+    data class Interior(val rectangle: Rectangle) : State()
 
     /**
      * Abstract state representing trajectories flowing [from] one given rectangle [to] the other one.
      */
-    data class Transition(val from: Int?, val to: Int?) : State()
+    data class Transition(val from: Rectangle?, val to: Rectangle?) : State()
 
 }

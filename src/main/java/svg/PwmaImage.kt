@@ -49,11 +49,13 @@ data class PwmaImage(
         // Draw transitions between closest anchor of each state.
         val transitions = (0 until stateCount).flatMap { s ->
             s.successors(true).asSequence().map { (t, _, _) ->
-                val from = states[s]
-                val to = states[t]
-                val (a, b) = from.anchors.flatMap { a -> to.anchors.map { b -> a to b } }.minBy { (a, b) -> a.distanceTo(b) }!!
-                Line(a, b, Style.ARROW.strokeWidth(0.5))
-            }.toList()
+                if (s == t) null else {
+                    val from = states[s]
+                    val to = states[t]
+                    val (a, b) = from.anchors.flatMap { a -> to.anchors.map { b -> a to b } }.minBy { (a, b) -> a.distanceTo(b) }!!
+                    Line(a, b, Style.ARROW.strokeWidth(0.5))
+                }
+            }.filterNotNull().toList()
         }
 
         val properties = property.flatMap { (color, states) ->

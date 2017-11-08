@@ -17,8 +17,8 @@ object VanDerPolOscillator : ModelFactory {
     }
 
     override fun dimensionBounds(i: Int): Pair<Double, Double> = when (i) {
-        0 -> -5.0 to 5.0
-        1 -> -5.0 to 5.0
+        0 -> -10.0 to 10.0
+        1 -> -10.0 to 10.0
         2 -> 0.1 to 0.6
         else -> unknownDimension(i)
     }

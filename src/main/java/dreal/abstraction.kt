@@ -1,13 +1,6 @@
 package dreal
 
-import com.github.sybila.ode.generator.NodeEncoder
-import com.github.sybila.ode.model.OdeModel
-import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.runBlocking
-import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.coroutines.experimental.buildSequence
-
+/*
 fun main(args: Array<String>) {
     runBlocking {
         G1Sswitch.makePartitions()
@@ -273,22 +266,22 @@ fun ModelFactory.makeDerivationInequality(encoder: NodeEncoder, s: State.Transit
         encoder.upperThreshold(s.from, 0) == encoder.lowerThreshold(s.to, 0) -> {
             // X dim aligned, upper facet
             val eq = makeModelEquation(0, names).replace("x$suffix", tX[encoder.upperThreshold(s.from, 0)].toString())
-            """(assert (<= 0.0 $eq))"""
+            """(assert (< 0.0 $eq))"""
         }
         encoder.lowerThreshold(s.from, 0) == encoder.upperThreshold(s.to, 0) -> {
             // X dim aligned, lower facet
             val eq = makeModelEquation(0, names).replace("x$suffix", tX[encoder.lowerThreshold(s.from, 0)].toString())
-            """(assert (>= 0.0 $eq))"""
+            """(assert (> 0.0 $eq))"""
         }
         encoder.upperThreshold(s.from, 1) == encoder.lowerThreshold(s.to, 1) -> {
             // Y dim aligned, upper facet
             val eq = makeModelEquation(1, names).replace("y$suffix", tY[encoder.upperThreshold(s.from, 1)].toString())
-            """(assert (<= 0.0 $eq))"""
+            """(assert (< 0.0 $eq))"""
         }
         encoder.lowerThreshold(s.from, 1) == encoder.upperThreshold(s.to, 1) -> {
             // Y dim aligned, lower facet
             val eq = makeModelEquation(1, names).replace("y$suffix", tY[encoder.lowerThreshold(s.from, 1)].toString())
-            """(assert (>= 0.0 $eq))"""
+            """(assert (> 0.0 $eq))"""
         }
         else -> ""
     }
@@ -318,3 +311,4 @@ fun State.Transition.getBounds(tX: List<Double>, tY: List<Double>, encoder: Node
     }
 }
 
+*/

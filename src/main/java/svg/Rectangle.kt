@@ -30,22 +30,27 @@ data class Rectangle(
         get() = center + (xy(dimensions.x * 0.5, dimensions.y * -0.5))
 
     val up: Point
-        get() = center + xy(0.0, width * 0.5)
+        get() = center + xy(0.0, height * 0.5)
 
     val down: Point
-        get() = center + xy(0.0, width * -0.5)
+        get() = center + xy(0.0, height * -0.5)
 
     val left: Point
-        get() = center + xy(height * -0.5, 0.0)
+        get() = center + xy(width * -0.5, 0.0)
 
     val right: Point
-        get() = center + xy(height * 0.5, 0.0)
+        get() = center + xy(width * 0.5, 0.0)
 
     val width: Double
         get() = dimensions.x
 
     val height: Double
         get() = dimensions.y
+
+    fun innerPoint(dimension: Dimension, fraction: Double): Point {
+        return if (dimension == Dimension.X) xy(left.x + fraction * width, center.y)
+        else xy(center.x, down.y + fraction * height)
+    }
 
     override fun compileSvg(): String {
         val (x, y) = center + (dimensions * -0.5)

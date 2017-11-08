@@ -1,19 +1,52 @@
 package svg
 
-import com.github.sybila.ode.generator.NodeEncoder
-import com.github.sybila.ode.model.OdeModel
 import dreal.DeltaModel
-import dreal.FIND
 import dreal.State
-import kotlin.coroutines.experimental.buildSequence
 
 data class DeltaImage(
-        val ode: OdeModel,
         val model: DeltaModel,
         val property: Set<State>
 ) {
 
     fun toSvgImage(): SvgImage {
+        val partitionRectangles = model.partitioning.map { it.toSvgRectangle() }
+        val arrowSize = partitionRectangles.map { it.dimensions.x }.average() / 5.0
+
+        val states: Map<State, Circle?> = model.states.map { s ->
+            s to when (s) {
+                is State.Interior -> {
+                    val rectangle = s.rectangle.toSvgRectangle()
+                    Circle(rectangle.center, Math.min(rectangle.width, rectangle.height) * 0.125, Style.FILL)
+                }
+                is State.Transition -> {
+                    if (s.to == null || s.from == null) null else {
+                        val (rectangle, dimension, positive) = s.from.getFacetIntersection(s.to)!!
+                        val d = if (dimension == 0) Dimension.Y else Dimension.X    // sliding dimension is the opposite of contact dimension
+                        val r = rectangle.toSvgRectangle()
+                        val center = if (State.Transition(s.to, s.from) !in model.states) r.center else {
+                            r.innerPoint(d, if (positive) 0.33 else 0.66)
+                        }
+                        val radius = (if (dimension == 0) r.height else r.width) * 0.1
+                        Circle(center, radius, Style.STROKE.fillColor(if (s in property) "#aaaaff" else "#ffffff"))
+                    }
+                }
+                else -> null
+            }
+        }.toMap()
+
+        val transitions = model.transitions.flatMap { (source, destinations) ->
+            states[source]?.let { from ->
+                destinations.filter { it != source }.mapNotNull { states[it] }.map { to ->
+                    val (a, b) = from.anchors.flatMap { a -> to.anchors.map { b -> a to b } }.minBy { (a, b) -> a.distanceTo(b) }!!
+                    Line(a, b, Style.ARROW.strokeWidth(0.5))
+                }
+            } ?: emptyList()
+        }
+
+        return SvgImage(partitionRectangles + states.values.filterNotNull() + transitions, arrowSize)
+
+/*
+
         val tX = ode.variables[0].thresholds
         val tY = ode.variables[1].thresholds
         val encoder = NodeEncoder(ode)
@@ -142,7 +175,7 @@ data class DeltaImage(
             } ?: emptyList()
         }.filterNotNull()
 
-        return SvgImage( transitions + gridX + gridY + states.filterNotNull(), arrowSize = arrowSize)
+        return SvgImage( transitions + gridX + gridY + states.filterNotNull(), arrowSize = arrowSize)*/
     }
 
 }

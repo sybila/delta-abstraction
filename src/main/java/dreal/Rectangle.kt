@@ -1,0 +1,92 @@
+package dreal
+
+import findInterval
+import mapIntervals
+import svg.Point
+import svg.Style
+import java.util.*
+
+data class Rectangle(
+        // vector of pairs: [[x_l, x_h], [y_l, y_h], [z_l, z_h], ...]
+        // note that some intervals may be singular (one point), but no can be empty
+        private val bounds: DoubleArray
+) {
+
+    init {
+        if (bounds.size % 2 == 1) error("Bounds array in $this has an odd length.")
+        bounds.findInterval { a, b -> a > b }?.let { error("Empty bound $it in $this") }
+    }
+
+    fun bound(dimension: Int, high: Boolean): Double = bounds[2 * dimension + if (high) 1 else 0]
+
+    fun getFacet(dimension: Int, positive: Boolean): Rectangle
+            = Rectangle(DoubleArray(bounds.size) { i ->
+        val d = i / 2
+        if (d != dimension) bounds[i]
+        else {
+            val bound = if (positive) 1 else 0
+            bounds[2 * d + bound]
+        }
+    })
+
+    // return null if intersection has less than n-1 dimensions
+    fun getFacetIntersection(other: Rectangle): FacetIntersection? {
+        if (this.bounds.size != other.bounds.size) error("Rectangles not compatible")
+        val intersection = DoubleArray(bounds.size) { i ->
+            if (i % 2 == 0) {
+                maxOf(this.bounds[i], other.bounds[i])
+            } else {
+                minOf(this.bounds[i], other.bounds[i])
+            }
+        }
+        if (intersection.findInterval { a, b -> a > b } != null) return null    // empty intersection
+        val degeneracy = intersection.mapIntervals { a, b -> if (a == b) 1 else 0 }
+        val degenerateDimensions = degeneracy.sum()
+        return when {
+            degenerateDimensions == 0 -> error("Rectangles have non-degenerate intersection!")
+            degenerateDimensions > 1 -> {
+                null
+            }
+            else -> {
+                val dimension = degeneracy.indexOfFirst { it == 1 }
+                val positive = this.bounds[2*dimension+1] == other.bounds[2*dimension]
+                FacetIntersection(Rectangle(intersection), dimension, positive)
+            }
+        }
+    }
+
+    /**
+     * Contains - intersection rectangle, dimension on which the facets intersect, true if the target rectangle
+     * is higher than the argument rectangle in that dimension (positive trajectory flow)
+     */
+    data class FacetIntersection(
+            val rectangle: Rectangle, val dimension: Int, val positive: Boolean
+    )
+
+    fun toSvgRectangle(): svg.Rectangle {
+        if (bounds.size != 4) error("Only 2D rectangles can be drawn in SVG.")
+        val center = Point((bounds[0] + bounds[1]) / 2, (bounds[2] + bounds[3]) / 2)
+        val dimensions = Point(bounds[1] - bounds[0], bounds[3] - bounds[2])
+        return svg.Rectangle(center, dimensions, Style.STROKE)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Rectangle
+
+        if (!Arrays.equals(bounds, other.bounds)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return Arrays.hashCode(bounds)
+    }
+
+    override fun toString(): String {
+        return bounds.mapIntervals { a, b -> if (a == b) a.toString() else "[$a, $b]" }
+                .joinToString(prefix = "R[", postfix = "]")
+    }
+}
