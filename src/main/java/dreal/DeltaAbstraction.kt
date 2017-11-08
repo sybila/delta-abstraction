@@ -134,14 +134,14 @@ suspend fun DeltaModel.filterAdmissibleStates(tMax: Double): DeltaModel {
     (<= x_0_0 ${start.bound(0, true)}) (>= x_0_0 ${start.bound(0, false)})
     (<= y_0_0 ${start.bound(1, true)}) (>= y_0_0 ${start.bound(1, false)})
 ))
-(assert (${if (sPositive) "<" else ">" } 0 ${makeModelEquation(sDim, names = listOf("x", "y"))}))
+(assert (${if (sPositive) "<" else ">" } 0 ${makeModelEquation(sDim, names = listOf("x_0_0", "y_0_0"))}))
 
 ; End facet
 (assert (and
     (<= x_0_t ${target.bound(0, true)}) (>= x_0_t ${target.bound(0, false)})
     (<= y_0_t ${target.bound(1, true)}) (>= y_0_t ${target.bound(1, false)})
 ))
-(assert (${if (tPositive) "<" else ">" } 0 ${makeModelEquation(tDim, names = listOf("x", "y"))}))
+(assert (${if (tPositive) "<" else ">" } 0 ${makeModelEquation(tDim, names = listOf("x_0_t", "y_0_t"))}))
 
 
 ; WARNING: dReal is magic and these three asserts, while useless speed up the computation significantly!!
