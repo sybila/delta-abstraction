@@ -4,7 +4,7 @@ import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 import kotlin.coroutines.experimental.buildSequence
 
-private val POOL = newFixedThreadPoolContext(4, "abstraction")
+private val POOL = newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), "abstraction")
 
 fun ModelFactory.makeStateSpace(partitioning: List<Rectangle>): DeltaModel {
 
