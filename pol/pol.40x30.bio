@@ -5,7 +5,7 @@ CONSTS: m,2
 EQ: x = y
 EQ: y = m*y - m*pow(x,2)*y - x
 
-VAR_POINTS: x: 1500, 70; y: 1500, 50
+VAR_POINTS: x: 1500, 50; y: 1500, 50
 
 THRES: x: -8, 8
 THRES: y: -8, 8

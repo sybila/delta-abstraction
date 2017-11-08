@@ -4,12 +4,15 @@ import dreal.DeltaModel
 import dreal.State
 
 data class DeltaImage(
-        val model: DeltaModel,
-        val property: Set<State>
+        private val model: DeltaModel,
+        private val property: Set<State>
 ) {
 
     fun toSvgImage(): SvgImage {
-        val partitionRectangles = model.partitioning.map { it.toSvgRectangle() }
+        val partitionRectangles = model.partitioning.map { r ->
+            val isColored = property.any { (it is State.Interior && it.rectangle == r) || (it is State.Transition && it.to == r) }
+            r.toSvgRectangle().copy(style = Style.STROKE.fillColor(if (isColored) "#aaaaff" else "#ffffff"))
+        }
         val arrowSize = partitionRectangles.map { it.dimensions.x }.average() / 5.0
 
         val states: Map<State, Circle?> = model.states.map { s ->
