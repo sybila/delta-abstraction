@@ -151,6 +151,9 @@ suspend fun DeltaModel.filterAdmissibleStates(tMax: Double): DeltaModel {
 )))
 """)
 
+                    if (from.from.bound(1, false) == -4.0 && from.from == to.to) {
+                        println(reachQuery)
+                    }
                     //println(reachQuery)
 
                     (from to to).takeIf { !checkNotSat(reachQuery) }
