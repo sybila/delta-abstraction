@@ -26,7 +26,7 @@ object StateSerializer : JsonSerializer<State>, JsonDeserializer<State> {
 
 }
 */
-val projectRoot = File("/Users/daemontus/Downloads/pol/")
+val projectRoot = File("pol/")
 val json = GsonBuilder().setPrettyPrinting()/*.registerTypeAdapter(State::class.java, StateSerializer)*/.create()!!
 
 fun makePwmaAbstraction(suffix: String) {
@@ -162,13 +162,13 @@ suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Doub
         val imgTerminal = DeltaImage(model, terminal)
         val imgInitial = DeltaImage(model, initial)
         val imgCycle = DeltaImage(model, cycle)
-        File(projectRoot, "ts.pwma.$suffix.svg")
+        File(projectRoot, "ts.delta.$suffix.svg")
                 .writeText(imgPlain.toSvgImage().normalize(targetWidth).compileSvg())
-        File(projectRoot, "terminal.pwma.$suffix.svg")
+        File(projectRoot, "terminal.delta.$suffix.svg")
                 .writeText(imgTerminal.toSvgImage().normalize(targetWidth).compileSvg())
-        File(projectRoot, "initial.pwma.$suffix.svg")
+        File(projectRoot, "initial.delta.$suffix.svg")
                 .writeText(imgInitial.toSvgImage().normalize(targetWidth).compileSvg())
-        File(projectRoot, "cycle.pwma.$suffix.svg")
+        File(projectRoot, "cycle.delta.$suffix.svg")
                 .writeText(imgCycle.toSvgImage().normalize(targetWidth).compileSvg())
         //File(projectRoot, "all.pwma.$suffix.svg")
         //        .writeText(imgAll.toSvgImage().normalize(targetWidth).compileSvg())
@@ -183,15 +183,17 @@ suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Doub
 
 fun main(args: Array<String>) {
     runBlocking {
-        val suffix = "15x15"
+        val suffix = "40x30"
         val targetWidth = 1000.0
         val tMax = 1.0
-        /*
+/*
         makePwmaAbstraction(suffix)
         makePwmaPartition(suffix)
         makeTerminalComponents(suffix)
         makePwmaSvg(suffix, targetWidth)
-        */
+*/
+        makePwmaAbstraction(suffix)
+        makePwmaPartition(suffix)
         makeDeltaTransitions(tMax, suffix, targetWidth, "pwma")
     }
 }

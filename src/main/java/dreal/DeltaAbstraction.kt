@@ -1,9 +1,10 @@
 package dreal
 
-import kotlinx.coroutines.experimental.CommonPool
 import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 import kotlin.coroutines.experimental.buildSequence
 
+private val POOL = newFixedThreadPoolContext(4, "abstraction")
 
 fun ModelFactory.makeStateSpace(partitioning: List<Rectangle>): DeltaModel {
 
@@ -36,7 +37,7 @@ fun ModelFactory.makeStateSpace(partitioning: List<Rectangle>): DeltaModel {
 suspend fun DeltaModel.filterAdmissibleStates(tMax: Double): DeltaModel {
 
     var progess = 0
-    val admissibleStates = states.map { async(CommonPool) {
+    val admissibleStates = states.map { async(POOL) {
         when (it) {
             is State.Interior -> {
                 val r = it.rectangle
@@ -103,7 +104,7 @@ suspend fun DeltaModel.filterAdmissibleStates(tMax: Double): DeltaModel {
     var tCount = 0
     val reachableTransitions = admissibleTransitions
             .flatMap { e -> e.value.map { (e.key to it).also { tCount += 1 } } }
-            .map { (from, to) -> async(CommonPool) {
+            .map { (from, to) -> async(POOL) {
                 if (from is State.Transition && to is State.Transition && from.to != null && from.from != null && to.to != null && to.from != null) {
                     val bounds = from.to
                     val (start, sDim, sPositive) = from.from.getFacetIntersection(from.to)!!
