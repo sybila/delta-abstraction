@@ -10,7 +10,6 @@ import dreal.toModelFactory
 import kotlinx.coroutines.experimental.CommonPool
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.runBlocking
-import svg.DeltaImage
 import svg.PwmaImage
 import java.io.File
 /*
@@ -26,12 +25,11 @@ object StateSerializer : JsonSerializer<State>, JsonDeserializer<State> {
 
 }
 */
-val projectRoot = File("pol/")
 val json = GsonBuilder().setPrettyPrinting()/*.registerTypeAdapter(State::class.java, StateSerializer)*/.create()!!
 
 fun makePwmaAbstraction(suffix: String) {
     val model = Parser()
-            .parse(File(projectRoot, "pol.$suffix.bio"))
+            .parse(File(projectRoot, "model.$suffix.bio"))
             .computeApproximation(cutToRange = true, fast = false)
 
     val modelCopy = model.copy(variables = model.variables.mapIndexed { index, variable ->
@@ -45,13 +43,13 @@ fun makePwmaAbstraction(suffix: String) {
         }
     })
 
-    File(projectRoot, "pol.pwma.$suffix.bio")
+    File(projectRoot, "model.pwma.$suffix.bio")
             .writeText(modelCopy.toBio())
 }
 
 fun makePwmaPartition(suffix: String) {
     val model = Parser()
-            .parse(File(projectRoot, "pol.pwma.$suffix.bio"))
+            .parse(File(projectRoot, "model.pwma.$suffix.bio"))
 
     File(projectRoot, "partition.pwma.$suffix.json")
             .writeText(json.toJson(model.exportPartitioning()))
@@ -59,7 +57,7 @@ fun makePwmaPartition(suffix: String) {
 
 fun makeTerminalComponents(suffix: String) {
     val model = Parser()
-            .parse(File(projectRoot, "pol.pwma.$suffix.bio"))
+            .parse(File(projectRoot, "model.pwma.$suffix.bio"))
 
     val ts = RectangleOdeModel(model, true)
 
@@ -93,7 +91,7 @@ fun makeTerminalComponents(suffix: String) {
 
 fun makePwmaSvg(suffix: String, targetWidth: Double) {
     val model = Parser()
-            .parse(File(projectRoot, "pol.pwma.$suffix.bio"))
+            .parse(File(projectRoot, "model.pwma.$suffix.bio"))
     val ts = RectangleOdeModel(model, true)
 
     val terminal = json.fromJson<List<Int>>(    File(projectRoot, "terminal.pwma.$suffix.json").readText(),
@@ -127,7 +125,7 @@ fun makePwmaSvg(suffix: String, targetWidth: Double) {
 
 suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Double, partition: String) {
     val ode = Parser()
-            .parse(File(projectRoot, "pol.$suffix.bio"))
+            .parse(File(projectRoot, "model.$suffix.bio"))
 
     val partitioning = json.fromJson(File(projectRoot, "partition.$partition.$suffix.json").readText(), Partitioning::class.java)
 
@@ -158,7 +156,7 @@ suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Doub
 
         File(projectRoot, "cycle.pwma.$suffix.json")
                 .writeText(json.toJson(cycle))*/
-        val imgPlain = DeltaImage(model, emptySet())
+        /*val imgPlain = DeltaImage(model, emptySet())
         val imgTerminal = DeltaImage(model, terminal)
         val imgInitial = DeltaImage(model, initial)
         val imgCycle = DeltaImage(model, cycle)
@@ -169,7 +167,13 @@ suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Doub
         File(projectRoot, "initial.delta.$suffix.svg")
                 .writeText(imgInitial.toSvgImage().normalize(targetWidth).compileSvg())
         File(projectRoot, "cycle.delta.$suffix.svg")
-                .writeText(imgCycle.toSvgImage().normalize(targetWidth).compileSvg())
+                .writeText(imgCycle.toSvgImage().normalize(targetWidth).compileSvg())*/
+        println("Terminal ${terminal.size} / ${m.states.size}")
+        println("Initial ${initial.size} / ${m.states.size}")
+        println("Cycle ${cycle.size} / ${m.states.size}")
+        println("Terminal: $terminal")
+        println("Initial: $initial")
+        println("Cycle: $cycle")
         //File(projectRoot, "all.pwma.$suffix.svg")
         //        .writeText(imgAll.toSvgImage().normalize(targetWidth).compileSvg())
     }
@@ -179,13 +183,13 @@ suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Doub
 
 }
 
-
+val projectRoot = File("chua/")
 
 fun main(args: Array<String>) {
     runBlocking {
-        val suffix = "40x30"
+        val suffix = "10x10x10"
         val targetWidth = 1000.0
-        val tMax = 1.0
+        val tMax = 0.1
 /*
         makePwmaAbstraction(suffix)
         makePwmaPartition(suffix)

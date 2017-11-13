@@ -3,6 +3,7 @@ package dreal
 import com.github.sybila.ode.model.Evaluable
 import com.github.sybila.ode.model.OdeModel
 import com.github.sybila.ode.model.Pow
+import com.github.sybila.ode.model.RampApproximation
 
 fun OdeModel.toModelFactory() = object : ModelFactory {
 
@@ -25,5 +26,12 @@ fun OdeModel.toModelFactory() = object : ModelFactory {
 
 fun Evaluable.toSMT(names: List<String>): String = when (this) {
     is Pow -> "(pow ${names[this.varIndex]} ${this.degree})"
+    is RampApproximation -> {
+        when {
+            this == RampApproximation(0, doubleArrayOf(-5.0, -1.0, 5.0), doubleArrayOf(4.0, 0.0, 6.0)) -> "(abs (+ x 1))"
+            this == RampApproximation(0, doubleArrayOf(-5.0, 1.0, 5.0), doubleArrayOf(6.0, 0.0, 4.0)) -> "(abs (- x 1))"
+            else -> error("unsupported evaluable $this")
+        }
+    }
     else -> error("unsupported evaluable $this")
 }

@@ -43,47 +43,59 @@ suspend fun DeltaModel.filterAdmissibleStates(tMax: Double): DeltaModel {
                 val r = it.rectangle
                 val safetyQuery = makeQuery(
 """
-(declare-fun x () Real [${r.bound(0, false)}, ${r.bound(0, true)}])
-(declare-fun y () Real [${r.bound(1, false)}, ${r.bound(1, true)}])
+${names.makeLines { i, name ->
+    "(declare-fun $name () Real ${r.interval(i)})"
+}}
 
-(declare-fun x_0_0 () Real [${r.bound(0, false)}, ${r.bound(0, true)}])
-(declare-fun y_0_0 () Real [${r.bound(1, false)}, ${r.bound(1, true)}])
+${names.makeLines { i, name ->
+    "(declare-fun ${name}_0_0 () Real ${r.interval(i)})"
+}}
 
-(declare-fun x_0_t () Real [${r.bound(0, false)}, ${r.bound(0, true)}])
-(declare-fun y_0_t () Real [${r.bound(1, false)}, ${r.bound(1, true)}])
+${names.makeLines { i, name ->
+    "(declare-fun ${name}_0_t () Real ${r.interval(i)})"
+}}
 
 (declare-fun time () Real [0.0, $tMax])
 
 (define-ode flow_1 (
-    (= d/dt[x] ${makeModelEquation(0, names = listOf("x", "y"))})
-    (= d/dt[y] ${makeModelEquation(1, names = listOf("x", "y"))})
+    ${names.makeLines { i, name ->
+    "(= d/dt[$name] ${makeModelEquation(i)})"
+}}
 ))
 
 (assert (= time $tMax))
-(assert (= [x_0_t y_0_t] (integral 0. time [x_0_0 y_0_0] flow_1)))
+(assert (= [${names.joinToString(separator = " ") { it + "_0_t" }}] (integral 0. time [${names.joinToString(separator = " ") { it + "_0_0" }}] flow_1)))
+
 ; WARNING: dReal is magic and these three asserts, while useless speed up the computation significantly!!
 (assert (and
-    (<= x_0_t ${r.bound(0, true)}) (>= x_0_t ${r.bound(0, false)})
-    (<= y_0_t ${r.bound(1, true)}) (>= y_0_t ${r.bound(1, false)})
+    ${names.makeLines { i, name ->
+        "(<= ${name}_0_t ${r.bound(i, true)}) (>= ${name}_0_t ${r.bound(i, false)})"
+    }}
 ))
 (assert (and
-    (<= x_0_0 ${r.bound(0, true)}) (>= x_0_0 ${r.bound(0, false)})
-    (<= y_0_0 ${r.bound(1, true)}) (>= y_0_0 ${r.bound(1, false)})
+    ${names.makeLines { i, name ->
+        "(<= ${name}_0_0 ${r.bound(i, true)}) (>= ${name}_0_0 ${r.bound(i, false)})"
+    }}
 ))
 (assert (forall_t 1 [0 time] (and
-    (<= x_0_t ${r.bound(0, true)}) (>= x_0_t ${r.bound(0, false)})
-    (<= y_0_t ${r.bound(1, true)}) (>= y_0_t ${r.bound(1, false)})
+    ${names.makeLines { i, name ->
+        "(<= ${name}_0_t ${r.bound(i, true)}) (>= ${name}_0_t ${r.bound(i, false)})"
+    }}
 )))
 """)
+
+                //println(safetyQuery)
+
                 it.takeIf { !checkNotSat(safetyQuery) }
             }
             is State.Transition -> if (it.from == null || it.to == null) null else {
                 val (r, dimension, positive) = it.from.getFacetIntersection(it.to)!!
                 val admissibilityQuery = makeQuery(
 """
-(declare-fun x () Real [${r.bound(0, false)}, ${r.bound(0, true)}])
-(declare-fun y () Real [${r.bound(1, false)}, ${r.bound(1, true)}])
-(assert (${if (positive) "<" else ">" } 0 ${makeModelEquation(dimension, names = listOf("x", "y"))}))
+${names.makeLines { i, name ->
+    "(declare-fun $name () Real ${r.interval(i)})"
+}}
+(assert (${if (positive) "<" else ">" } 0 ${makeModelEquation(dimension)}))
 """)
 
                 it.takeIf { !checkNotSat(admissibilityQuery) }
@@ -94,6 +106,8 @@ suspend fun DeltaModel.filterAdmissibleStates(tMax: Double): DeltaModel {
         progess += 1
         if (progess % 10 == 0) println("S: $progess / ${states.size}")
     } }
+
+    println("Unsafe states ${admissibleStates.count { it is State.Interior }}")
 
     val admissibleTransitions = transitions
             .filterKeys { it in admissibleStates }
@@ -111,44 +125,49 @@ suspend fun DeltaModel.filterAdmissibleStates(tMax: Double): DeltaModel {
                     val (target, tDim, tPositive) = to.from.getFacetIntersection(to.to)!!
                     val reachQuery = makeQuery(
                             """
-(declare-fun x () Real [${bounds.bound(0, false)}, ${bounds.bound(0, true)}])
-(declare-fun y () Real [${bounds.bound(1, false)}, ${bounds.bound(1, true)}])
+${names.makeLines { i, name ->
+    "(declare-fun $name () Real ${bounds.interval(i)})"
+}}
 
-(declare-fun x_0_0 () Real [${bounds.bound(0, false)}, ${bounds.bound(0, true)}])
-(declare-fun y_0_0 () Real [${bounds.bound(1, false)}, ${bounds.bound(1, true)}])
+${names.makeLines { i, name ->
+    "(declare-fun ${name}_0_0 () Real ${bounds.interval(i)})"
+}}
 
-(declare-fun x_0_t () Real [${bounds.bound(0, false)}, ${bounds.bound(0, true)}])
-(declare-fun y_0_t () Real [${bounds.bound(1, false)}, ${bounds.bound(1, true)}])
+${names.makeLines { i, name ->
+    "(declare-fun ${name}_0_t () Real ${bounds.interval(i)})"
+}}
 
 (declare-fun time () Real [0.0, $tMax])
 
 (define-ode flow_1 (
-    (= d/dt[x] ${makeModelEquation(0, names = listOf("x", "y"))})
-    (= d/dt[y] ${makeModelEquation(1, names = listOf("x", "y"))})
+    ${names.makeLines { i, name ->
+        "(= d/dt[$name] ${makeModelEquation(i)})"
+    }}
 ))
 
-(assert (= [x_0_t y_0_t] (integral 0. time [x_0_0 y_0_0] flow_1)))
+(assert (= [${names.joinToString(separator = " ") { it + "_0_t" }}] (integral 0. time [${names.joinToString(separator = " ") { it + "_0_0" }}] flow_1)))
 
 ; Start facet
 (assert (and
-    (<= x_0_0 ${start.bound(0, true)}) (>= x_0_0 ${start.bound(0, false)})
-    (<= y_0_0 ${start.bound(1, true)}) (>= y_0_0 ${start.bound(1, false)})
+    ${names.makeLines { i, name ->
+        "(<= ${name}_0_0 ${start.bound(i, true)}) (>= ${name}_0_0 ${start.bound(i, false)})"
+    }}
 ))
-(assert (${if (sPositive) "<" else ">" } 0 ${makeModelEquation(sDim, names = listOf("x_0_0", "y_0_0"))}))
+(assert (${if (sPositive) "<" else ">" } 0 ${makeModelEquation(sDim, names = names.map { it + "_0_0" })}))
 
 ; End facet
 (assert (and
-    (<= x_0_t ${target.bound(0, true)}) (>= x_0_t ${target.bound(0, false)})
-    (<= y_0_t ${target.bound(1, true)}) (>= y_0_t ${target.bound(1, false)})
+    ${names.makeLines { i, name ->
+        "(<= ${name}_0_t ${start.bound(i, true)}) (>= ${name}_0_t ${start.bound(i, false)})"
+    }}
 ))
-(assert (${if (tPositive) "<" else ">" } 0 ${makeModelEquation(tDim, names = listOf("x_0_t", "y_0_t"))}))
-
-(assert (> time 0.001))
+(assert (${if (tPositive) "<" else ">" } 0 ${makeModelEquation(tDim, names = names.map { it + "_0_t" })}))
 
 ; WARNING: dReal is magic and these three asserts, while useless speed up the computation significantly!!
 (assert (forall_t 1 [0 time] (and
-    (<= x_0_t ${bounds.bound(0, true)}) (>= x_0_t ${bounds.bound(0, false)})
-    (<= y_0_t ${bounds.bound(1, true)}) (>= y_0_t ${bounds.bound(1, false)})
+    ${names.makeLines { i, name ->
+        "(<= ${name}_0_t ${bounds.bound(i, true)}) (>= ${name}_0_t ${bounds.bound(i, false)})"
+    }}
 )))
 """)
 
@@ -169,3 +188,7 @@ suspend fun DeltaModel.filterAdmissibleStates(tMax: Double): DeltaModel {
             transitions = reachableTransitions
     )
 }
+
+private inline fun List<String>.makeLines(action: (Int, String) -> String): String = this.mapIndexed(action).joinToString(separator = "\n")
+
+private fun Rectangle.interval(dim: Int): String = "[${bound(dim, false)}, ${bound(dim, true)}]"
