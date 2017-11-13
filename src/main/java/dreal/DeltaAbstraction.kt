@@ -2,6 +2,7 @@ package dreal
 
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.newFixedThreadPoolContext
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.experimental.buildSequence
 
 private val POOL = newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), "abstraction")
@@ -37,6 +38,8 @@ fun ModelFactory.makeStateSpace(partitioning: List<Rectangle>): DeltaModel {
 suspend fun DeltaModel.filterAdmissibleStates(tMax: Double): DeltaModel {
 
     var progess = 0
+    val admissible = AtomicInteger(0)
+    val total = AtomicInteger(0)
     val admissibleStates = states.map { async(POOL) {
         when (it) {
             is State.Interior -> {
@@ -86,7 +89,12 @@ ${names.makeLines { i, name ->
 
                 //println(safetyQuery)
 
-                it.takeIf { !checkNotSat(safetyQuery) }
+                it.takeIf { !checkNotSat(safetyQuery).also {
+                    if (it) admissible.incrementAndGet()
+                    if (total.incrementAndGet() % 100 == 0) {
+                        println("${admissible.get()} / ${total.get()} / ${states.size}")
+                    }
+                } }
             }
             is State.Transition -> if (it.from == null || it.to == null) null else {
                 val (r, dimension, positive) = it.from.getFacetIntersection(it.to)!!
@@ -102,10 +110,10 @@ ${names.makeLines { i, name ->
             }
             else -> null
         }
-    } }.mapNotNull { it.await().also {
+    } }.mapNotNull { it.await()/*.also {
         progess += 1
         if (progess % 10 == 0) println("S: $progess / ${states.size}")
-    } }
+    }*/ }
 
     println("Unsafe states ${admissibleStates.count { it is State.Interior }}")
 
