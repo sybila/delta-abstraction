@@ -106,7 +106,12 @@ ${names.makeLines { i, name ->
 (assert (${if (positive) "<" else ">" } 0 ${makeModelEquation(dimension)}))
 """)
 
-                it.takeIf { !checkNotSat(admissibilityQuery) }
+                it.takeIf { !checkNotSat(admissibilityQuery).also {
+                    if (it) admissible.incrementAndGet()
+                    if (total.incrementAndGet() % 100 == 0) {
+                        println("${admissible.get()} / ${total.get()} / ${states.size}")
+                    }
+                } }
             }
             else -> null
         }
