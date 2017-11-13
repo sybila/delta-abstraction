@@ -1,10 +1,10 @@
 package dreal
 
-import findInterval
-import mapIntervals
 import svg.Point
 import svg.Style
 import java.util.*
+import kotlin.coroutines.experimental.SequenceBuilder
+import kotlin.coroutines.experimental.buildSequence
 
 data class Rectangle(
         // vector of pairs: [[x_l, x_h], [y_l, y_h], [z_l, z_h], ...]
@@ -12,12 +12,45 @@ data class Rectangle(
         private val bounds: DoubleArray
 ) {
 
+    val dimensions = bounds.size / 2
+
     init {
         if (bounds.size % 2 == 1) error("Bounds array in $this has an odd length.")
         bounds.findInterval { a, b -> a > b }?.let { error("Empty bound $it in $this") }
     }
 
+    @Transient
+    val vertices: Sequence<DoubleArray> = buildSequence {
+        val result = DoubleArray(bounds.size / 2)
+        nextDimension(0, result)
+    }
+
+    private suspend fun SequenceBuilder<DoubleArray>.nextDimension(dim: Int, result: DoubleArray) {
+        if (dim == dimensions) yield(result)
+        else {
+            result[dim] = bounds[2 * dim]
+            nextDimension(dim + 1, result)
+            result[dim] = bounds[2 * dim + 1]
+            nextDimension(dim + 1, result)
+        }
+    }
+
+    fun size(dimension: Int): Double = bounds[2 * dimension + 1] - bounds[2 * dimension]
+
     fun bound(dimension: Int, high: Boolean): Double = bounds[2 * dimension + if (high) 1 else 0]
+
+    fun split(dimension: Int): Pair<Rectangle, Rectangle> {
+        val splitPoint = (bounds[2*dimension] + bounds[2*dimension + 1]) / 2
+        val low = Rectangle(DoubleArray(bounds.size) { i ->
+            val d = i / 2
+            if (d == dimension && i % 2 == 1) splitPoint else bounds[i]
+        })
+        val high = Rectangle(DoubleArray(bounds.size) { i ->
+            val d = i / 2
+            if (d == dimension && i % 2 == 0) splitPoint else bounds[i]
+        })
+        return low to high
+    }
 
     fun getFacet(dimension: Int, positive: Boolean): Rectangle
             = Rectangle(DoubleArray(bounds.size) { i ->

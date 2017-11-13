@@ -1,7 +1,7 @@
 package dreal
 
 data class DeltaModel(
-        val partitioning: List<Rectangle>,
+        val partitioning: Partitioning,
         private val modelFactory: ModelFactory,
         val states: List<State>,
         val transitions: Map<State, List<State>>

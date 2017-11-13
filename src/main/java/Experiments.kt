@@ -3,29 +3,67 @@ import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.Parser
 import com.github.sybila.ode.model.computeApproximation
 import com.github.sybila.ode.model.toBio
-import com.google.gson.GsonBuilder
-import dreal.filterAdmissibleStates
-import dreal.makeStateSpace
-import dreal.toModelFactory
+import com.google.gson.*
+import dreal.*
 import kotlinx.coroutines.experimental.CommonPool
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.runBlocking
+import svg.DeltaImage
 import svg.PwmaImage
 import java.io.File
-/*
-object StateSerializer : JsonSerializer<State>, JsonDeserializer<State> {
+import java.lang.reflect.Type
+
+private class SerializedState(
+        val tag: String,
+        val r1: Rectangle?,
+        val r2: Rectangle?
+)
+
+private object StateSerializer : JsonSerializer<State>, JsonDeserializer<State> {
 
     override fun serialize(src: State, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
-        when (src)
+        return when (src) {
+            is State.Exterior -> context.serialize(SerializedState("exterior", null, null))
+            is State.Interior -> context.serialize(SerializedState("interior", src.rectangle, null))
+            is State.Transition -> context.serialize(SerializedState("transition", src.from, src.to))
+        }
     }
 
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): State {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val serialized = context.deserialize<SerializedState>(json, SerializedState::class.java)
+        return when (serialized.tag) {
+            "exterior" -> State.Exterior
+            "interior" -> State.Interior(serialized.r1!!)
+            "transition" -> State.Transition(serialized.r1!!, serialized.r2!!)
+            else -> error("Unknown tag ${serialized.tag}")
+        }
     }
 
 }
-*/
-val json = GsonBuilder().setPrettyPrinting()/*.registerTypeAdapter(State::class.java, StateSerializer)*/.create()!!
+
+private object ModelSerializer : JsonSerializer<DeltaModel>, JsonDeserializer<DeltaModel> {
+
+    override fun serialize(src: DeltaModel, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+        return when (src) {
+            is State.Exterior -> context.serialize(SerializedState("exterior", null, null))
+            is State.Interior -> context.serialize(SerializedState("interior", src.rectangle, null))
+            is State.Transition -> context.serialize(SerializedState("transition", src.from, src.to))
+        }
+    }
+
+    override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): DeltaModel {
+        val serialized = context.deserialize<SerializedState>(json, SerializedState::class.java)
+        return when (serialized.tag) {
+            "exterior" -> State.Exterior
+            "interior" -> State.Interior(serialized.r1!!)
+            "transition" -> State.Transition(serialized.r1!!, serialized.r2!!)
+            else -> error("Unknown tag ${serialized.tag}")
+        }
+    }
+
+}
+
+val json = GsonBuilder().setPrettyPrinting().registerTypeAdapter(State::class.java, StateSerializer).create()!!
 
 fun makePwmaAbstraction(suffix: String) {
     val model = Parser()
@@ -53,6 +91,16 @@ fun makePwmaPartition(suffix: String) {
 
     File(projectRoot, "partition.pwma.$suffix.json")
             .writeText(json.toJson(model.exportPartitioning()))
+}
+
+fun makeSplitPartition(suffix: String, tMax: Double, precision: Double) {
+    val model = Parser()
+            .parse(File(projectRoot, "model.$suffix.bio"))
+
+    runBlocking {
+        File(projectRoot, "partition.split.$suffix.json")
+                .writeText(json.toJson(model.makePartitioning(tMax, precision)))
+    }
 }
 
 fun makeTerminalComponents(suffix: String) {
@@ -130,26 +178,36 @@ suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Doub
     val partitioning = json.fromJson(File(projectRoot, "partition.$partition.$suffix.json").readText(), Partitioning::class.java)
 
     val model = ode.toModelFactory()
-            .makeStateSpace(partitioning.rectangles)
+            .makeStateSpace(partitioning)
             .filterAdmissibleStates(tMax)
+            .reduction()
 
+    File(projectRoot, "ts.delta.json")
+            .writeText(json.toJson(model.transitions.toList()))
+
+    val imgPlain = DeltaImage(model, emptySet())
+    File(projectRoot, "ts.delta.svg")
+            .writeText(imgPlain.toSvgImage().normalize(targetWidth).compileSvg())
+
+    /*
     val m = model
 
     runBlocking {
         var k = 0
+        val initial = m.terminal(false)
         val terminal = m.states.map { async(CommonPool) {
             it.takeIf { it in m.invert(m.reach(m.invert(m.reach(setOf(it), false)), false)) }
         } }.mapNotNull { it.await().also {
             k += 1
-            println("T: $k")
+            println("T: $k / ${m.states.size}")
         } }.toSet()
-
+/*
         k = 0
         val initial = m.states.map { async(CommonPool) {
             it.takeIf { it in m.invert(m.reach(m.invert(m.reach(setOf(it), true)), true)) }
         } }.mapNotNull { it.await().also {
             k += 1
-            println("I: $k")
+            println("I: $k / ${m.states.size}")
         } }.toSet()
 
         k = 0
@@ -157,8 +215,8 @@ suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Doub
             it.takeIf { it in m.reach(m.next(setOf(it)), true) }
         } }.mapNotNull { it.await().also {
             k += 1
-            println("C: $k")
-        } }.toSet()
+            println("C: $k / ${m.states.size}")
+        } }.toSet()*/
 
         /*File(projectRoot, "terminal.pwma.$suffix.json")
                 .writeText(json.toJson(terminal))
@@ -168,40 +226,64 @@ suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Doub
 
         File(projectRoot, "cycle.pwma.$suffix.json")
                 .writeText(json.toJson(cycle))*/
-        /*val imgPlain = DeltaImage(model, emptySet())
         val imgTerminal = DeltaImage(model, terminal)
         val imgInitial = DeltaImage(model, initial)
-        val imgCycle = DeltaImage(model, cycle)
-        File(projectRoot, "ts.delta.$suffix.svg")
-                .writeText(imgPlain.toSvgImage().normalize(targetWidth).compileSvg())
+        //val imgCycle = DeltaImage(model, cycle)
         File(projectRoot, "terminal.delta.$suffix.svg")
                 .writeText(imgTerminal.toSvgImage().normalize(targetWidth).compileSvg())
         File(projectRoot, "initial.delta.$suffix.svg")
                 .writeText(imgInitial.toSvgImage().normalize(targetWidth).compileSvg())
-        File(projectRoot, "cycle.delta.$suffix.svg")
+        /*File(projectRoot, "cycle.delta.$suffix.svg")
                 .writeText(imgCycle.toSvgImage().normalize(targetWidth).compileSvg())*/
         println("Terminal ${terminal.size} / ${m.states.size}")
         println("Initial ${initial.size} / ${m.states.size}")
-        println("Cycle ${cycle.size} / ${m.states.size}")
-        println("Terminal: $terminal")
+        //println("Cycle ${cycle.size} / ${m.states.size}")
+        /*println("Terminal: $terminal")
         println("Initial: $initial")
-        println("Cycle: $cycle")
+        println("Cycle: $cycle")*/
         //File(projectRoot, "all.pwma.$suffix.svg")
         //        .writeText(imgAll.toSvgImage().normalize(targetWidth).compileSvg())
+
+        var iter = model.states.toSet()
+        do {
+            val old = iter
+            iter = model.next(iter)
+        } while (old != iter)
+
+        val imgFix = DeltaImage(model, iter)
+        File(projectRoot, "fix.delta.$suffix.svg")
+                .writeText(imgFix.toSvgImage().normalize(targetWidth).compileSvg())
+        println("Fix ${iter.size} / ${m.states.size }")
     }
 
     //File(projectRoot, "ts.delta.$suffix.svg")
     //        .writeText(DeltaImage(model, emptySet()).toSvgImage().normalize(targetWidth).compileSvg())
-
+*/
 }
 
-val projectRoot = File("chua/")
+fun investigate(targetWidth: Double) {
+    val transitions = json.fromJson<List<Pair<State, List<State>>>>(File(projectRoot, "ts.delta.json").bufferedReader(), List::class.java)
+
+    val ode = Parser().parse(File(projectRoot, "model.30x40.bio"))
+
+    val model = DeltaModel()
+
+    val t = model.transitions.entries.map { it.key to it.value.size }
+    val maxSize = t.maxBy { it.second }!!.second
+    val max = t.filter { it.second == maxSize }.map { it.first }.toSet()
+
+    val img = DeltaImage(model, max)
+    File(projectRoot, "prop.delta.svg")
+            .writeText(img.toSvgImage().normalize(targetWidth).compileSvg())
+}
+
+val projectRoot = File("pol/")
 
 fun main(args: Array<String>) {
     runBlocking {
-        val suffix = "10x10x10"
+        val suffix = "40x30"
         val targetWidth = 1000.0
-        val tMax = 0.01
+        val tMax = 0.1
 /*
         makePwmaAbstraction(suffix)
         makePwmaPartition(suffix)
@@ -209,7 +291,8 @@ fun main(args: Array<String>) {
         makePwmaSvg(suffix, targetWidth)
 */
         makePwmaAbstraction(suffix)
-        makePwmaPartition(suffix)
-        makeDeltaTransitions(tMax, suffix, targetWidth, "pwma")
+        makeSplitPartition(suffix, tMax, 1.0)
+        makeDeltaTransitions(tMax, suffix, targetWidth, "split")
+        investigate(targetWidth)
     }
 }

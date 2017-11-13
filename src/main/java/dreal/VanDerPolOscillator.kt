@@ -23,4 +23,7 @@ object VanDerPolOscillator : ModelFactory {
         else -> unknownDimension(i)
     }
 
+    override fun eval(i: Int, at: DoubleArray): Double {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
 }

@@ -9,7 +9,7 @@ data class DeltaImage(
 ) {
 
     fun toSvgImage(): SvgImage {
-        val partitionRectangles = model.partitioning.map { r ->
+        val partitionRectangles = model.partitioning.rectangles.map { (r, _) ->
             val isColored = property.any { (it is State.Interior && it.rectangle == r) || (it is State.Transition && it.to == r) }
             r.toSvgRectangle().copy(style = Style.STROKE.fillColor(if (isColored) "#aaaaff" else "#ffffff"))
         }

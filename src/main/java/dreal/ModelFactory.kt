@@ -19,4 +19,5 @@ interface ModelFactory {
 
     fun unknownDimension(i: Int): Nothing = error("svg.Dimension $i does not exist in $this")
 
+    fun eval(i: Int, at: DoubleArray): Double
 }

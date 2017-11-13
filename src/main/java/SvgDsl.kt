@@ -96,6 +96,30 @@ fun DeltaModel.reach(from: Set<State>, time: Boolean = true): Set<State> {
     return iteration
 }
 
+fun DeltaModel.terminal(time: Boolean = true): Set<State> {
+    val terminal = HashSet<State>()
+
+    fun explore(states: Set<State>) {
+        println("Iter: ${states.size}")
+        val co = this.states - states
+        val pivot = states.iterator().next()
+        val F = reach(setOf(pivot), time) - co
+        val B = reach(setOf(pivot), !time) - (this.states - F)
+        val F_minus_B = F - B
+        if (F_minus_B.isEmpty()) terminal.addAll(F) else {
+            println("F_minus_B")
+            explore(F_minus_B)
+        }
+        val BB = reach(F, !time) - co
+        val V_minus_BB = states - BB
+        println("BB")
+        if (V_minus_BB.isNotEmpty()) explore(V_minus_BB)
+    }
+
+    explore(this.states.toSet())
+    return terminal
+}
+
 fun RectangleOdeModel.next(input: Set<Int>, time: Boolean = true): Set<Int>
     = input.flatMap{ it.successors(time).asSequence().map { it.target }.toList() }.toSet()
 

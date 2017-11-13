@@ -22,6 +22,12 @@ fun OdeModel.toModelFactory() = object : ModelFactory {
 
     override fun dimensionBounds(i: Int): Pair<Double, Double> = ode.variables[i].range
 
+    override fun eval(i: Int, at: DoubleArray): Double {
+        val eq = ode.variables[i].equation
+        return eq.fold(0.0) { r, s ->
+            r + (listOf(s.constant) + s.variableIndices.map { at[it] } + s.evaluable.map { it.eval(at[it.varIndex]) }).fold(1.0) { a, b -> a * b }
+        }
+    }
 }
 
 fun Evaluable.toSMT(names: List<String>): String = when (this) {

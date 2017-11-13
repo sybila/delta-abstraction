@@ -1,11 +1,10 @@
-
+package dreal
 import com.github.sybila.ode.model.OdeModel
-import dreal.Rectangle
 import kotlin.coroutines.experimental.buildSequence
 
 
 data class Partitioning(
-        val rectangles: List<Rectangle>
+        val rectangles: List<Pair<Rectangle, Boolean?>>
 )
 
 inline fun DoubleArray.findInterval(action: (a: Double, b: Double) -> Boolean): Pair<Double, Double>? {
@@ -35,5 +34,5 @@ fun OdeModel.exportPartitioning(): Partitioning {
                 }
     }
 
-    return Partitioning(expandVariable(0, emptyList()).toList())
+    return Partitioning(expandVariable(0, emptyList()).map { it to null }.toList())
 }
