@@ -158,7 +158,7 @@ ${names.makeLines { i, name ->
 ; End facet
 (assert (and
     ${names.makeLines { i, name ->
-        "(<= ${name}_0_t ${start.bound(i, true)}) (>= ${name}_0_t ${start.bound(i, false)})"
+        "(<= ${name}_0_t ${target.bound(i, true)}) (>= ${name}_0_t ${target.bound(i, false)})"
     }}
 ))
 (assert (${if (tPositive) "<" else ">" } 0 ${makeModelEquation(tDim, names = names.map { it + "_0_t" })}))
@@ -171,9 +171,9 @@ ${names.makeLines { i, name ->
 )))
 """)
 
-                    if (from.from.bound(1, false) == -4.0 && from.from == to.to) {
+                    /*if (from.from.bound(1, false) == -4.0 && from.from == to.to) {
                         println(reachQuery)
-                    }
+                    }*/
                     //println(reachQuery)
 
                     (from to to).takeIf { !checkNotSat(reachQuery) }

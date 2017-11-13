@@ -33,7 +33,7 @@ fun makePwmaAbstraction(suffix: String) {
             .computeApproximation(cutToRange = true, fast = false)
 
     val modelCopy = model.copy(variables = model.variables.mapIndexed { index, variable ->
-        if (index != 1) variable else {
+        if (index == 0 && variable.thresholds.size >= variable.varPoints!!.second) variable else {
             val (l, h) = variable.range
             val count = variable.varPoints!!.second
             val step = (h - l) / count
@@ -136,17 +136,29 @@ suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Doub
     val m = model
 
     runBlocking {
+        var k = 0
         val terminal = m.states.map { async(CommonPool) {
             it.takeIf { it in m.invert(m.reach(m.invert(m.reach(setOf(it), false)), false)) }
-        } }.mapNotNull { it.await() }.toSet()
+        } }.mapNotNull { it.await().also {
+            k += 1
+            println("T: $k")
+        } }.toSet()
 
+        k = 0
         val initial = m.states.map { async(CommonPool) {
             it.takeIf { it in m.invert(m.reach(m.invert(m.reach(setOf(it), true)), true)) }
-        } }.mapNotNull { it.await() }.toSet()
+        } }.mapNotNull { it.await().also {
+            k += 1
+            println("I: $k")
+        } }.toSet()
 
+        k = 0
         val cycle = m.states.map { async(CommonPool) {
             it.takeIf { it in m.reach(m.next(setOf(it)), true) }
-        } }.mapNotNull { it.await() }.toSet()
+        } }.mapNotNull { it.await().also {
+            k += 1
+            println("C: $k")
+        } }.toSet()
 
         /*File(projectRoot, "terminal.pwma.$suffix.json")
                 .writeText(json.toJson(terminal))
@@ -189,7 +201,7 @@ fun main(args: Array<String>) {
     runBlocking {
         val suffix = "10x10x10"
         val targetWidth = 1000.0
-        val tMax = 0.1
+        val tMax = 0.01
 /*
         makePwmaAbstraction(suffix)
         makePwmaPartition(suffix)
