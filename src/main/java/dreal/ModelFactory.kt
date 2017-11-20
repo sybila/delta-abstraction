@@ -5,6 +5,9 @@ package dreal
  */
 interface ModelFactory {
 
+    val dimensions: Int
+    val boundsRect: Rectangle
+
     val names: List<String>
 
     val x: String

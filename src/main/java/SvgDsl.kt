@@ -1,8 +1,6 @@
 
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.Parser
-import dreal.DeltaModel
-import dreal.State
 import java.io.File
 
 fun main(args: Array<String>) {

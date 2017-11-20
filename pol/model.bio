@@ -1,0 +1,11 @@
+VARS: x,y
+
+CONSTS: m,2
+
+EQ: x = y
+EQ: y = m*y - m*pow(x,2)*y - x
+
+VAR_POINTS: x: 500, 20; y: 500, 20
+
+THRES: x: -4, 4
+THRES: y: -4, 4

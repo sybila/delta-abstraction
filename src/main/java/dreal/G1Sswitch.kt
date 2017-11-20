@@ -1,6 +1,6 @@
 package dreal
 
-object G1Sswitch : ModelFactory {
+/*object G1Sswitch : ModelFactory {
 
     override val names: List<String> = listOf("x", "y", "p")
 
@@ -29,4 +29,4 @@ object G1Sswitch : ModelFactory {
     override fun eval(i: Int, at: DoubleArray): Double {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
-}
+}*/

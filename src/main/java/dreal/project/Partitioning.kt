@@ -28,7 +28,9 @@ fun OdeModel.exportPartitioning(): Partitioning {
         ts.run {
             if (s.successors(true).asSequence().all { it.target != s }) {
                 // There is no self-loop, therefore the state is safe!
-                Partitioning.Item(rectangle, Double.POSITIVE_INFINITY, true)
+                // Partitioning.Item(rectangle, Double.POSITIVE_INFINITY, true)
+                // But that only holds if we use the piece-wise multi affine system afterwards, which is generally not true :/
+                Partitioning.Item(rectangle)
             } else {
                 // There is a self-loop, the state is potentially unsafe.
                 Partitioning.Item(rectangle)

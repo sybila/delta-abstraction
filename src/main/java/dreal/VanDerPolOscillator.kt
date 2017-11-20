@@ -5,7 +5,7 @@ package dreal
  *
  * For negative parameter values, the limit cycle collapses into a spiral.
  */
-object VanDerPolOscillator : ModelFactory {
+/*object VanDerPolOscillator : ModelFactory {
 
     override val names: List<String> = listOf("x", "y", "p")
 
@@ -26,4 +26,4 @@ object VanDerPolOscillator : ModelFactory {
     override fun eval(i: Int, at: DoubleArray): Double {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
-}
+}*/

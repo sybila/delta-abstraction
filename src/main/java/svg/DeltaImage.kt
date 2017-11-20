@@ -1,6 +1,5 @@
 package svg
 
-import dreal.DeltaModel
 import dreal.State
 import dreal.project.Partitioning
 import dreal.project.TransitionSystem
@@ -9,9 +8,9 @@ data class DeltaImage(
         private val partitioning: Partitioning,
         private val system: TransitionSystem<State>,
         private val property: Set<State>
-) {
+) : Image {
 
-    fun toSvgImage(): SvgImage {
+    override fun toSvgImage(): SvgImage {
         val rectangles = partitioning.items.map { it.bounds }
         val partitionRectangles = rectangles.map { r ->
             val isColored = property.any { (it is State.Interior && it.rectangle == r) || (it is State.Transition && it.to == r) }
@@ -37,18 +36,22 @@ data class DeltaImage(
                         Circle(center, radius, Style.STROKE.fillColor(if (s in property) "#aaaaff" else "#ffffff"))
                     }
                 }
-                else -> null
+                is State.Exterior -> null
             }
         }.toMap()
 
+        // WARNING: We are not drawing the exterior state, so some transitions will not be drawn!
+
         val transitions = system.edges.mapNotNull { (source, destination) ->
             if (source == destination) null else {
-                val from = states[system.states[source]]!!
-                val to = states[system.states[destination]]!!
-                val (a, b) = from.anchors.flatMap { a ->
-                    to.anchors.map { b -> a to b }
-                }.minBy { (a, b) -> a.distanceTo(b) }!!
-                Line(a, b, Style.ARROW.strokeWidth(0.5))
+                val from = states[system.states[source]]
+                val to = states[system.states[destination]]
+                if (from == null || to == null) null else {
+                    val (a, b) = from.anchors.flatMap { a ->
+                        to.anchors.map { b -> a to b }
+                    }.minBy { (a, b) -> a.distanceTo(b) }!!
+                    Line(a, b, Style.ARROW.strokeWidth(0.5))
+                }
             }
         }
 

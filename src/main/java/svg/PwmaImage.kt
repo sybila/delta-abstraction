@@ -8,9 +8,9 @@ data class PwmaImage(
         val ode: OdeModel,
         val model: RectangleOdeModel,
         val property: Map<String, Set<Int>>
-) {
+) : Image {
 
-    fun toSvgImage(): SvgImage = model.run {
+    override fun toSvgImage(): SvgImage = model.run {
         val tX = ode.variables[0].thresholds
         val tY = ode.variables[1].thresholds
         val encoder = NodeEncoder(ode)

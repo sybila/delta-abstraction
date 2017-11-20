@@ -1,4 +1,4 @@
-
+/*
 import dreal.project.DeltaTransitionSystemSvg
 import dreal.project.RectangularPartitioningSvg
 import dreal.project.RectangularTransitionSystemSvg
@@ -8,7 +8,7 @@ import dreal.project.pwma.RectangularTransitionSystemTask
 import dreal.project.pwma.RectangularPartitioningTask
 import dreal.project.pwma.RectangularTerminalComponentsSvg
 import kotlinx.coroutines.experimental.runBlocking
-
+*/
 /*
 private class SerializedState(
         val tag: String,
@@ -229,7 +229,7 @@ val projectRoot = File("pol/")
 
 */
 
-
+/*
 fun main(args: Array<String>) {
     runBlocking {
         val suffix = "40x30"
@@ -251,4 +251,4 @@ fun main(args: Array<String>) {
         DeltaTransitionSystemTask.execute()
         DeltaTransitionSystemSvg.execute()
     }
-}
+}*/

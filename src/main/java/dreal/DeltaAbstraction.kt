@@ -2,13 +2,14 @@ package dreal
 
 import dreal.project.Partitioning
 import dreal.project.TransitionSystem
-import kotlinx.coroutines.experimental.newFixedThreadPoolContext
 import kotlin.coroutines.experimental.buildSequence
 
 fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
 
     val rectangles = partitioning.items.map { it.bounds }
     val stateSpace = buildSequence {
+        yield(State.Exterior)
+
         for ((r, _, safe) in partitioning.items) {
             if (safe != true) {
                 yield(State.Interior(r))
@@ -21,6 +22,12 @@ fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
                     yield(State.Transition(from, to))
                 }
             }
+            boundsRect.facets.forEach { facet ->
+                if (from.getFacetIntersection(facet) != null) {
+                    yield(State.Transition(from, facet))
+                    yield(State.Transition(facet, from))
+                }
+            }
         }
     }.toList()
 
@@ -31,35 +38,25 @@ fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
             is State.Interior -> stateSpace.filter { it == start || (it is State.Transition && it.from == start.rectangle) }
             is State.Transition -> stateSpace.filter {
                 (it is State.Interior && it.rectangle == start.to) ||
-                (it is State.Transition && it.from == start.to)
+                (it is State.Transition && start.to.degenrateDimensions == 0 && it.from == start.to) ||
+                (it is State.Exterior && start.to.degenrateDimensions > 0)
             }
-            else -> emptyList()
+            is State.Exterior -> stateSpace.filter {
+                it is State.Transition && it.from.degenrateDimensions > 0
+            }
         }).map { index[start]!! to index[it]!! }
     }
 
     return DeltaModel(partitioning, this, TransitionSystem(stateSpace, edges))
 }
+/*
+fun ModelFactory.checkAdmissible(system: TransitionSystem<State>): TransitionSystem<State> {
+
+
+
+}*/
 
 /*
-fun DeltaModel.reduction(): DeltaModel {
-
-    val inverseTS = system.flatMap { (s, succ) -> succ.map { it to s } }.groupBy({ it.first }, { it.second })
-
-    val remove = states.filter { system.getOrDefault(it, emptyList()).size == 1 && inverseTS.getOrDefault(it, emptyList()).size == 1 }
-
-    val TScopy = HashMap(system)
-    for (r in remove) {
-        val pred = inverseTS[r]!!.first()
-        val succ = system[r]!!.first()
-        TScopy.remove(r)
-        TScopy[pred] = system[pred]!! - r + succ
-    }
-
-    println("Removed ${remove.size} states.")
-
-    return this.copy(states = states - remove, system = TScopy)
-}
-
 suspend fun OdeModel.makePartitioning(tMax: Double, precision: Double): Partitioning {
 
     val safe = HashSet<Rectangle>()

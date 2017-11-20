@@ -9,7 +9,14 @@ fun OdeModel.toModelFactory() = object : ModelFactory {
 
     val ode = this@toModelFactory
 
+    override val dimensions: Int = ode.variables.size
+
     override val names: List<String> = ode.variables.map { it.name }
+
+    override val boundsRect: Rectangle = Rectangle(DoubleArray(variables.size * 2) { i ->
+        val dim = i / 2
+        if (i % 2 == 0) variables[dim].range.first else variables[dim].range.second
+    })
 
     override fun makeModelEquation(i: Int, names: List<String>): String {
         val eq = ode.variables[i].equation
@@ -28,6 +35,7 @@ fun OdeModel.toModelFactory() = object : ModelFactory {
             r + (listOf(s.constant) + s.variableIndices.map { at[it] } + s.evaluable.map { it.eval(at[it.varIndex]) }).fold(1.0) { a, b -> a * b }
         }
     }
+
 }
 
 fun Evaluable.toSMT(names: List<String>): String = when (this) {

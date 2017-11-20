@@ -16,6 +16,16 @@ data class Rectangle(
 
     val intervals = bounds
 
+    val facets: Sequence<Rectangle>
+        get() = (0 until dimensions)
+                .asSequence()
+                .flatMap {
+                    sequenceOf(getFacet(it, true), getFacet(it, false))
+                }
+
+    val degenrateDimensions: Int
+        get() = bounds.mapIntervals { a, b -> if (a == b) 1 else 0 }.sum()
+
     init {
         if (bounds.size % 2 == 1) error("Bounds array in $this has an odd length.")
         bounds.findInterval { a, b -> a > b }?.let { error("Empty bound $it in $this") }
