@@ -67,7 +67,7 @@ fun main(args: Array<String>) {
             val abs = model.makeDeltaAbstraction(VanDerPolOscillator)
             val cycle = abs.states.filter {
                 println("Check $it")
-                val successors = abs.transitions[it]
+                val successors = abs.system[it]
                 it in abs.forward(successors?.toSet() ?: emptySet())
             }.toSet()
             //val reach = abs.forward(setOf(State.Transition(50, 51)))
@@ -77,47 +77,6 @@ fun main(args: Array<String>) {
             DeltaImage(model, abs, cycle).toSvgImage().normalize(1000.0).writeTo(writer)
         }
     }*/
-}
-
-fun DeltaModel.invert(set: Set<State>): Set<State> = (states - set).toSet()
-
-fun DeltaModel.next(from: Set<State>, time: Boolean = true): Set<State> {
-    val ts = if (time) transitions else transitions.flatMap { (s, succ) -> succ.map { it to s } }.groupBy({ it.first }, { it.second })
-    return from.flatMap { ts[it] ?: emptyList() }.toSet()
-}
-
-fun DeltaModel.reach(from: Set<State>, time: Boolean = true): Set<State> {
-    val ts = if (time) transitions else transitions.flatMap { (s, succ) -> succ.map { it to s } }.groupBy({ it.first }, { it.second })
-    var iteration = from
-    do {
-        val old = iteration
-        iteration += iteration.flatMap { ts[it] ?: emptyList() }.toSet()
-    } while (old != iteration)
-    return iteration
-}
-
-fun DeltaModel.terminal(time: Boolean = true): Set<State> {
-    val terminal = HashSet<State>()
-
-    fun explore(states: Set<State>) {
-        println("Iter: ${states.size}")
-        val co = this.states - states
-        val pivot = states.iterator().next()
-        val F = reach(setOf(pivot), time) - co
-        val B = reach(setOf(pivot), !time) - (this.states - F)
-        val F_minus_B = F - B
-        if (F_minus_B.isEmpty()) terminal.addAll(F) else {
-            println("F_minus_B")
-            explore(F_minus_B)
-        }
-        val BB = reach(F, !time) - co
-        val V_minus_BB = states - BB
-        println("BB")
-        if (V_minus_BB.isNotEmpty()) explore(V_minus_BB)
-    }
-
-    explore(this.states.toSet())
-    return terminal
 }
 
 fun RectangleOdeModel.next(input: Set<Int>, time: Boolean = true): Set<Int>

@@ -46,7 +46,7 @@ data class PwmaImage(
             }
         }
 
-        // Draw transitions between closest anchor of each state.
+        // Draw system between closest anchor of each state.
         val transitions = (0 until stateCount).flatMap { s ->
             s.successors(true).asSequence().map { (t, _, _) ->
                 if (s == t) null else {

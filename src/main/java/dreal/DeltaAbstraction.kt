@@ -1,58 +1,63 @@
 package dreal
 
-import com.github.sybila.ode.model.OdeModel
-import kotlinx.coroutines.experimental.async
+import dreal.project.Partitioning
+import dreal.project.TransitionSystem
 import kotlinx.coroutines.experimental.newFixedThreadPoolContext
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.experimental.buildSequence
-
-private val POOL = newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), "abstraction")
 
 fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
 
+    val rectangles = partitioning.items.map { it.bounds }
     val stateSpace = buildSequence {
-        //TODO: We don't handle exterior states
-        yieldAll(partitioning.rectangles.asSequence().map { State.Interior(it.first) })
-        for (from in partitioning.rectangles) {
-            (partitioning.rectangles - from)
-                    .filter { from.first.getFacetIntersection(it.first) != null }
-                    .forEach { yield(State.Transition(from.first, it.first)) }
+        for ((r, _, safe) in partitioning.items) {
+            if (safe != true) {
+                yield(State.Interior(r))
+            }
         }
-    }.toSet()
 
-    val transitionSpace = stateSpace.map { start ->
-        start to when (start) {
-            is State.Interior -> stateSpace.filter { it == start || (it is State.Transition && it.from == start.rectangle) }
-            is State.Transition -> if (start.from == null || start.to == null) emptyList() else {
-                stateSpace.filter {
-                    (it is State.Interior && it.rectangle == start.to) ||
-                    (it is State.Transition && it.from == start.to)
+        for (from in rectangles) {
+            for (to in rectangles) {
+                if (from != to && from.getFacetIntersection(to) != null) {
+                    yield(State.Transition(from, to))
                 }
             }
-            else -> emptyList()
         }
-    }.toMap()
+    }.toList()
 
-    return DeltaModel(partitioning, this, stateSpace.toList(), transitionSpace)
+    val index = stateSpace.mapIndexed { i, s -> s to i }.toMap()
+
+    val edges = stateSpace.flatMap { start ->
+        (when (start) {
+            is State.Interior -> stateSpace.filter { it == start || (it is State.Transition && it.from == start.rectangle) }
+            is State.Transition -> stateSpace.filter {
+                (it is State.Interior && it.rectangle == start.to) ||
+                (it is State.Transition && it.from == start.to)
+            }
+            else -> emptyList()
+        }).map { index[start]!! to index[it]!! }
+    }
+
+    return DeltaModel(partitioning, this, TransitionSystem(stateSpace, edges))
 }
 
+/*
 fun DeltaModel.reduction(): DeltaModel {
 
-    val inverseTS = transitions.flatMap { (s, succ) -> succ.map { it to s } }.groupBy({ it.first }, { it.second })
+    val inverseTS = system.flatMap { (s, succ) -> succ.map { it to s } }.groupBy({ it.first }, { it.second })
 
-    val remove = states.filter { transitions.getOrDefault(it, emptyList()).size == 1 && inverseTS.getOrDefault(it, emptyList()).size == 1 }
+    val remove = states.filter { system.getOrDefault(it, emptyList()).size == 1 && inverseTS.getOrDefault(it, emptyList()).size == 1 }
 
-    val TScopy = HashMap(transitions)
+    val TScopy = HashMap(system)
     for (r in remove) {
         val pred = inverseTS[r]!!.first()
-        val succ = transitions[r]!!.first()
+        val succ = system[r]!!.first()
         TScopy.remove(r)
-        TScopy[pred] = transitions[pred]!! - r + succ
+        TScopy[pred] = system[pred]!! - r + succ
     }
 
     println("Removed ${remove.size} states.")
 
-    return this.copy(states = states - remove, transitions = TScopy)
+    return this.copy(states = states - remove, system = TScopy)
 }
 
 suspend fun OdeModel.makePartitioning(tMax: Double, precision: Double): Partitioning {
@@ -238,7 +243,7 @@ ${names.makeLines { i, name ->
 
     println("Unsafe states ${admissibleStates.count { it is State.Interior }}")
 
-    val admissibleTransitions = transitions
+    val admissibleTransitions = system
             .filterKeys { it in admissibleStates }
             .mapValues { entry -> entry.value.filter { it in admissibleStates } }
 
@@ -314,10 +319,12 @@ ${names.makeLines { i, name ->
 
     return this.copy(
             states = admissibleStates,
-            transitions = reachableTransitions
+            system = reachableTransitions
     )
 }
 
 private inline fun List<String>.makeLines(action: (Int, String) -> String): String = this.mapIndexed(action).joinToString(separator = "\n")
 
 private fun Rectangle.interval(dim: Int): String = "[${bound(dim, false)}, ${bound(dim, true)}]"
+
+*/

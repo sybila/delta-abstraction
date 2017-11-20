@@ -66,6 +66,6 @@ sealed class State {
     /**
      * Abstract state representing trajectories flowing [from] one given rectangle [to] the other one.
      */
-    data class Transition(val from: Rectangle?, val to: Rectangle?) : State()
+    data class Transition(val from: Rectangle, val to: Rectangle) : State()
 
 }

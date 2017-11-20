@@ -1,8 +1,10 @@
 package dreal
 
+import dreal.project.Partitioning
+import dreal.project.TransitionSystem
+
 data class DeltaModel(
         val partitioning: Partitioning,
-        private val modelFactory: ModelFactory,
-        val states: List<State>,
-        val transitions: Map<State, List<State>>
-) : ModelFactory by modelFactory
+        val model: ModelFactory,
+        val system: TransitionSystem<State>
+) : ModelFactory by model

@@ -1,18 +1,15 @@
 
-import com.github.sybila.ode.generator.rect.RectangleOdeModel
-import com.github.sybila.ode.model.Parser
-import com.github.sybila.ode.model.computeApproximation
-import com.github.sybila.ode.model.toBio
-import com.google.gson.*
-import dreal.*
-import kotlinx.coroutines.experimental.CommonPool
-import kotlinx.coroutines.experimental.async
+import dreal.project.DeltaTransitionSystemSvg
+import dreal.project.RectangularPartitioningSvg
+import dreal.project.RectangularTransitionSystemSvg
+import dreal.project.delta.DeltaTransitionSystemTask
+import dreal.project.pwma.ApproximationTask
+import dreal.project.pwma.RectangularTransitionSystemTask
+import dreal.project.pwma.RectangularPartitioningTask
+import dreal.project.pwma.RectangularTerminalComponentsSvg
 import kotlinx.coroutines.experimental.runBlocking
-import svg.DeltaImage
-import svg.PwmaImage
-import java.io.File
-import java.lang.reflect.Type
 
+/*
 private class SerializedState(
         val tag: String,
         val r1: Rectangle?,
@@ -41,57 +38,7 @@ private object StateSerializer : JsonSerializer<State>, JsonDeserializer<State> 
 
 }
 
-private object ModelSerializer : JsonSerializer<DeltaModel>, JsonDeserializer<DeltaModel> {
-
-    override fun serialize(src: DeltaModel, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
-        return when (src) {
-            is State.Exterior -> context.serialize(SerializedState("exterior", null, null))
-            is State.Interior -> context.serialize(SerializedState("interior", src.rectangle, null))
-            is State.Transition -> context.serialize(SerializedState("transition", src.from, src.to))
-        }
-    }
-
-    override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): DeltaModel {
-        val serialized = context.deserialize<SerializedState>(json, SerializedState::class.java)
-        return when (serialized.tag) {
-            "exterior" -> State.Exterior
-            "interior" -> State.Interior(serialized.r1!!)
-            "transition" -> State.Transition(serialized.r1!!, serialized.r2!!)
-            else -> error("Unknown tag ${serialized.tag}")
-        }
-    }
-
-}
-
 val json = GsonBuilder().setPrettyPrinting().registerTypeAdapter(State::class.java, StateSerializer).create()!!
-
-fun makePwmaAbstraction(suffix: String) {
-    val model = Parser()
-            .parse(File(projectRoot, "model.$suffix.bio"))
-            .computeApproximation(cutToRange = true, fast = false)
-
-    val modelCopy = model.copy(variables = model.variables.mapIndexed { index, variable ->
-        if (index == 0 && variable.thresholds.size >= variable.varPoints!!.second) variable else {
-            val (l, h) = variable.range
-            val count = variable.varPoints!!.second
-            val step = (h - l) / count
-            variable.copy(
-                    thresholds = (0 until count).map { l + it * step } + listOf(h)
-            )
-        }
-    })
-
-    File(projectRoot, "model.pwma.$suffix.bio")
-            .writeText(modelCopy.toBio())
-}
-
-fun makePwmaPartition(suffix: String) {
-    val model = Parser()
-            .parse(File(projectRoot, "model.pwma.$suffix.bio"))
-
-    File(projectRoot, "partition.pwma.$suffix.json")
-            .writeText(json.toJson(model.exportPartitioning()))
-}
 
 fun makeSplitPartition(suffix: String, tMax: Double, precision: Double) {
     val model = Parser()
@@ -170,7 +117,8 @@ fun makePwmaSvg(suffix: String, targetWidth: Double) {
     File(projectRoot, "all.pwma.$suffix.svg")
             .writeText(imgAll.toSvgImage().normalize(targetWidth).compileSvg())
 }
-
+*/
+/*
 suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Double, partition: String) {
     val ode = Parser()
             .parse(File(projectRoot, "model.$suffix.bio"))
@@ -183,7 +131,7 @@ suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Doub
             .reduction()
 
     File(projectRoot, "ts.delta.json")
-            .writeText(json.toJson(model.transitions.toList()))
+            .writeText(json.toJson(model.system.toList()))
 
     val imgPlain = DeltaImage(model, emptySet())
     File(projectRoot, "ts.delta.svg")
@@ -262,13 +210,13 @@ suspend fun makeDeltaTransitions(tMax: Double, suffix: String, targetWidth: Doub
 }
 
 fun investigate(targetWidth: Double) {
-    val transitions = json.fromJson<List<Pair<State, List<State>>>>(File(projectRoot, "ts.delta.json").bufferedReader(), List::class.java)
+    val system = json.fromJson<List<Pair<State, List<State>>>>(File(projectRoot, "ts.delta.json").bufferedReader(), List::class.java)
 
     val ode = Parser().parse(File(projectRoot, "model.30x40.bio"))
 
     val model = DeltaModel()
 
-    val t = model.transitions.entries.map { it.key to it.value.size }
+    val t = model.system.entries.map { it.key to it.value.size }
     val maxSize = t.maxBy { it.second }!!.second
     val max = t.filter { it.second == maxSize }.map { it.first }.toSet()
 
@@ -279,20 +227,28 @@ fun investigate(targetWidth: Double) {
 
 val projectRoot = File("pol/")
 
+*/
+
+
 fun main(args: Array<String>) {
     runBlocking {
         val suffix = "40x30"
         val targetWidth = 1000.0
         val tMax = 0.1
-/*
-        makePwmaAbstraction(suffix)
-        makePwmaPartition(suffix)
-        makeTerminalComponents(suffix)
-        makePwmaSvg(suffix, targetWidth)
-*/
-        makePwmaAbstraction(suffix)
-        makeSplitPartition(suffix, tMax, 1.0)
-        makeDeltaTransitions(tMax, suffix, targetWidth, "split")
-        investigate(targetWidth)
+        /*
+        ApproximationTask.output.delete()
+        RectangularPartitioningTask.output.delete()
+        RectangularPartitioningSvg.output.delete()
+        RectangularTransitionSystemTask.output.delete()
+        */
+        ApproximationTask.execute()
+        RectangularPartitioningTask.execute()
+        RectangularPartitioningSvg.execute()
+        RectangularTransitionSystemTask.execute()
+        RectangularTransitionSystemSvg.execute()
+        RectangularTerminalComponentsSvg.execute()
+
+        DeltaTransitionSystemTask.execute()
+        DeltaTransitionSystemSvg.execute()
     }
 }

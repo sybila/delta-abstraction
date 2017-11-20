@@ -14,6 +14,8 @@ data class Rectangle(
 
     val dimensions = bounds.size / 2
 
+    val intervals = bounds
+
     init {
         if (bounds.size % 2 == 1) error("Bounds array in $this has an odd length.")
         bounds.findInterval { a, b -> a > b }?.let { error("Empty bound $it in $this") }
