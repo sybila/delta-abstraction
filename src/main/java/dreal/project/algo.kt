@@ -2,9 +2,11 @@ package dreal.project
 
 fun <T: Any> TransitionSystem<T>.invert(): TransitionSystem<T> = this.copy(edges = edges.map { it.second to it.first })
 
-fun <T: Any> TransitionSystem<T>.terminalComponents(): Set<T> {
-    val fwd = this.edges.groupBy({ states[it.first] }, { states[it.second] })
-    val bwd = this.edges.groupBy({ states[it.second] }, { states[it.first] })
+fun <T: Any> TransitionSystem<T>.terminalComponents(time: Boolean = true): Set<T> {
+    val f = this.edges.groupBy({ states[it.first] }, { states[it.second] })
+    val b = this.edges.groupBy({ states[it.second] }, { states[it.first] })
+    val fwd = if (time) f else b
+    val bwd = if (time) b else f
 
     val result = HashSet<T>()
     fun search(V: Set<T>) {

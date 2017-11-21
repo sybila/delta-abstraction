@@ -128,6 +128,18 @@ object Delta {
             )
         }
 
+        object InitialComponents : JsonTask<List<State>>("initial.delta.rect.json", type<List<State>>(), Transitions) {
+            override fun run() {
+                val ts = Transitions.readJson()
+                val terminal = ts.terminalComponents(false)
+                writeJson(terminal.toList())
+            }
+
+            object Svg : DeltaTransitionSystemPropertySvgTask("initial.delta.rect.svg",
+                    PWMA.Partition, Transitions, TerminalComponents
+            )
+        }
+
         object Cycles : JsonTask<List<State>>("cycles.delta.rect.json", type<List<State>>(), Transitions) {
             override fun run() {
                 val ts = Transitions.readJson()

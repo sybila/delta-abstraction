@@ -251,6 +251,8 @@ fun main(args: Array<String>) {
     Delta.Rectangular.Transitions.Svg
     Delta.Rectangular.TerminalComponents
     Delta.Rectangular.TerminalComponents.Svg
+    Delta.Rectangular.InitialComponents
+    Delta.Rectangular.InitialComponents.Svg
     //Delta.Rectangular.Cycles
     //Delta.Rectangular.Cycles.Svg
 
