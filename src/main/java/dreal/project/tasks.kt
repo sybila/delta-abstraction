@@ -2,9 +2,8 @@ package dreal.project
 
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.computeApproximation
-import dreal.State
-import dreal.makeStateSpace
-import dreal.toModelFactory
+import dreal.*
+import kotlinx.coroutines.experimental.runBlocking
 import svg.PwmaImage
 
 object ModelFile : BioTask("model.bio")
@@ -76,28 +75,71 @@ object PWMA {
 
 object Delta {
 
-    object Transitions {
-        object Rectangular {
+    object Rectangular {
 
-            object All : JsonTask<TransitionSystem<State>>("ts.all.delta.rect.json", type<TransitionSystem<State>>(), PWMA.Approximation, PWMA.Partition) {
-                override fun run() {
-                    val model = PWMA.Approximation.readBio().toModelFactory()
-                    val partition = PWMA.Partition.readJson()
+        object All : JsonTask<TransitionSystem<State>>("ts.all.delta.rect.json", type<TransitionSystem<State>>(), PWMA.Approximation, PWMA.Partition) {
+            override fun run() {
+                val model = PWMA.Approximation.readBio().toModelFactory()
+                val partition = PWMA.Partition.readJson()
 
-                    writeJson(model.makeStateSpace(partition).system)
-                }
-
-                object Svg : DeltaTransitionSystemSvgTask("ts.all.delta.rect.svg", PWMA.Partition, All)
+                writeJson(model.makeStateSpace(partition).system)
             }
 
-            /*object Admissible : JsonTask<TransitionSystem<State>>("ts.admissible.delta.rect.json", type<TransitionSystem<State>>(), PWMA.Approximation, All) {
-                override fun run() {
-                    val model = PWMA.Approximation.readBio().toModelFactory()
-                    val
-                }
-                object Svg : DeltaTransitionSystemSvgTask("ts.admissible.delta.rect.svg", PWMA.Partition, All)
-            }*/
+            object Svg : DeltaTransitionSystemSvgTask("ts.all.delta.rect.svg", PWMA.Partition, All)
+        }
 
+        object States : JsonTask<TransitionSystem<State>>("ts.states.delta.rect.json", type<TransitionSystem<State>>(), ModelFile, All) {
+            override fun run() {
+                val model = ModelFile.readBio().toModelFactory()
+                val transitions = All.readJson()
+
+                runBlocking {
+                    val admissible = model.checkStates(transitions)
+                    writeJson(admissible)
+                }
+            }
+
+            object Svg : DeltaTransitionSystemSvgTask("ts.states.delta.rect.svg", PWMA.Partition, States)
+        }
+
+        object Transitions : JsonTask<TransitionSystem<State>>("ts.transitions.delta.rect.json", type<TransitionSystem<State>>(), ModelFile, States) {
+            override fun run() {
+                val model = ModelFile.readBio().toModelFactory()
+                val system = States.readJson()
+
+                runBlocking {
+                    val admissible = model.checkTransitions(system)
+                    writeJson(admissible)
+                }
+            }
+
+            object Svg : DeltaTransitionSystemSvgTask("ts.transitions.delta.rect.svg", PWMA.Partition, Transitions)
+        }
+
+        object TerminalComponents : JsonTask<List<State>>("terminal.delta.rect.json", type<List<State>>(), Transitions) {
+            override fun run() {
+                val ts = Transitions.readJson()
+                val terminal = ts.terminalComponents()
+                writeJson(terminal.toList())
+            }
+
+            object Svg : DeltaTransitionSystemPropertySvgTask("terminal.delta.rect.svg",
+                    PWMA.Partition, Transitions, TerminalComponents
+            )
+        }
+
+        object Cycles : JsonTask<List<State>>("cycles.delta.rect.json", type<List<State>>(), Transitions) {
+            override fun run() {
+                val ts = Transitions.readJson()
+                val terminal = ts.states.filter { s ->
+                    s in ts.reachSet(ts.next(setOf(s)))
+                }
+                writeJson(terminal.toList())
+            }
+
+            object Svg : DeltaTransitionSystemPropertySvgTask("cycles.delta.rect.svg",
+                    PWMA.Partition, Transitions, Cycles
+            )
         }
 
     }
@@ -112,8 +154,18 @@ fun main(args: Array<String>) {
     PWMA.Transitions.Svg
     PWMA.TerminalComponents
     PWMA.TerminalComponents.Svg
-    Delta.Transitions.Rectangular.All
-    Delta.Transitions.Rectangular.All.Svg
-    TaskGraph.clean()
+    Delta.Rectangular.All
+    Delta.Rectangular.All.Svg
+    Delta.Rectangular.States
+    Delta.Rectangular.States.Svg
+    Delta.Rectangular.Transitions
+    Delta.Rectangular.Transitions.Svg
+    Delta.Rectangular.TerminalComponents
+    Delta.Rectangular.TerminalComponents.Svg
+    Delta.Rectangular.Cycles
+    Delta.Rectangular.Cycles.Svg
+
+    //Delta.Rectangular.Transitions.output.delete()
+
     TaskGraph.make()
 }

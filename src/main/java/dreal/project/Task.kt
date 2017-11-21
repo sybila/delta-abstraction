@@ -89,3 +89,18 @@ abstract class DeltaTransitionSystemSvgTask(outputName: String,
     }
 
 }
+
+abstract class DeltaTransitionSystemPropertySvgTask(outputName: String,
+                                            private val partition: JsonTask<Partitioning>,
+                                            private val states: JsonTask<TransitionSystem<State>>,
+                                            private val property: JsonTask<List<State>>)
+    : SvgTask(outputName, partition, states, property) {
+
+    override fun run() {
+        val partition = partition.readJson()
+        val transitions = states.readJson()
+        val prop = property.readJson()
+        writeImage(DeltaImage(partition, transitions, prop.toSet()))
+    }
+
+}

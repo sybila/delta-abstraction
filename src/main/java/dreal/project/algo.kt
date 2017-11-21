@@ -31,6 +31,26 @@ fun <T: Any> TransitionSystem<T>.terminalComponents(): Set<T> {
     return result
 }
 
+fun <T: Any> TransitionSystem<T>.reachSet(from: Set<T>, time: Boolean = true): Set<T> {
+    val ts = if (time) {
+        this.edges.groupBy({ states[it.first] }, { states[it.second] })
+    } else {
+        this.edges.groupBy({ states[it.second] }, { states[it.first] })
+    }
+
+    return ts.reachSet(from)
+}
+
+fun <T: Any> TransitionSystem<T>.next(from: Set<T>, time: Boolean = true): Set<T> {
+    val ts = if (time) {
+        this.edges.groupBy({ states[it.first] }, { states[it.second] })
+    } else {
+        this.edges.groupBy({ states[it.second] }, { states[it.first] })
+    }
+
+    return from.asSequence().flatMap { ts[it]?.asSequence() ?: emptySequence() }.toSet()
+}
+
 fun <T: Any> Map<T, List<T>>.reachSet(data: Set<T>, bound: Set<T>? = null): Set<T> {
     var iteration = data
     do {

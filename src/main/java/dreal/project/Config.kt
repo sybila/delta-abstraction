@@ -29,6 +29,8 @@ object Config {
             .serializeSpecialFloatingPointValues()
             .create()!!
 
+    val tMax: Double = 2.0
+
     val dReal = "/usr/local/bin/dreal"
     val coreutilsTimeout = "/usr/local/bin/gtimeout"
 
