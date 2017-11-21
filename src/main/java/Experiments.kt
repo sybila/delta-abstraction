@@ -1,3 +1,7 @@
+import dreal.project.Delta
+import dreal.project.PWMA
+import dreal.project.TaskGraph
+
 /*
 import dreal.project.DeltaTransitionSystemSvg
 import dreal.project.RectangularPartitioningSvg
@@ -229,26 +233,28 @@ val projectRoot = File("pol/")
 
 */
 
-/*
-fun main(args: Array<String>) {
-    runBlocking {
-        val suffix = "40x30"
-        val targetWidth = 1000.0
-        val tMax = 0.1
-        /*
-        ApproximationTask.output.delete()
-        RectangularPartitioningTask.output.delete()
-        RectangularPartitioningSvg.output.delete()
-        RectangularTransitionSystemTask.output.delete()
-        */
-        ApproximationTask.execute()
-        RectangularPartitioningTask.execute()
-        RectangularPartitioningSvg.execute()
-        RectangularTransitionSystemTask.execute()
-        RectangularTransitionSystemSvg.execute()
-        RectangularTerminalComponentsSvg.execute()
 
-        DeltaTransitionSystemTask.execute()
-        DeltaTransitionSystemSvg.execute()
-    }
-}*/
+fun main(args: Array<String>) {
+
+    PWMA.Approximation
+    PWMA.Partition
+    PWMA.Partition.Svg
+    PWMA.Transitions
+    PWMA.Transitions.Svg
+    PWMA.TerminalComponents
+    PWMA.TerminalComponents.Svg
+    Delta.Rectangular.All
+    Delta.Rectangular.All.Svg
+    Delta.Rectangular.States
+    Delta.Rectangular.States.Svg
+    Delta.Rectangular.Transitions
+    Delta.Rectangular.Transitions.Svg
+    Delta.Rectangular.TerminalComponents
+    Delta.Rectangular.TerminalComponents.Svg
+    Delta.Rectangular.Cycles
+    Delta.Rectangular.Cycles.Svg
+
+    //Delta.Rectangular.Transitions.output.delete()
+
+    TaskGraph.make()
+}
