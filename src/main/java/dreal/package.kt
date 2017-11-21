@@ -3,6 +3,8 @@ package dreal
 import dreal.project.Config
 import java.io.File
 
+class Timeout : RuntimeException()
+
 fun provedUnsat(query: String, precision: Double = 0.001): Boolean {
     val tempFile = File.createTempFile("input", ".smt2")
     tempFile.writeText(query)
@@ -12,8 +14,8 @@ fun provedUnsat(query: String, precision: Double = 0.001): Boolean {
     )
     val output = process.inputStream.bufferedReader().readLines()
     return when {
+        output.isEmpty() -> throw Timeout()  // returned when killed by timeout
         output.last() == "unsat" -> true
-        output.isEmpty() -> false   // returned when killed by timeout
         "delta-sat" !in output.last() -> error("Solver failed: $output")
         else -> false
     }

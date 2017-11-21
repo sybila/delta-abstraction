@@ -10,6 +10,8 @@ import kotlin.coroutines.experimental.buildSequence
 
 fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
 
+    println(partitioning.items.map { it.bounds })
+
     val rectangles = partitioning.items.map { it.bounds }
     val stateSpace = buildSequence {
         yield(State.Exterior)
@@ -51,6 +53,9 @@ fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
         }).map { index[start]!! to index[it]!! }
     }
 
+    println(stateSpace)
+    println(edges)
+
     return DeltaModel(partitioning, this, TransitionSystem(stateSpace, edges))
 }
 
@@ -67,7 +72,9 @@ suspend fun ModelFactory.checkStates(system: TransitionSystem<State>): Transitio
                 ${names.makeLines { i, name -> "(declare-fun $name () Real ${r.interval(i)})" }}
                 (assert (${if (positive) "<" else ">" } 0 ${makeModelEquation(dimension)}))
                 """
-                !provedUnsat(makeQuery(admissibilityQuery))
+                try {
+                    !provedUnsat(makeQuery(admissibilityQuery))
+                } catch (e: Timeout) { true }
             }
             is State.Interior -> {
                 val r = state.rectangle
@@ -320,15 +327,23 @@ private suspend inline fun <T: Any> List<T>.filterParallel(crossinline action: (
 }
 
 private inline fun provedUnsatWithin(tMax: Double = Config.tMax, queryBuilder: (Double) -> String): Boolean {
-    val timeStep = tMax / 10.0
-    val times = (0..10).map { it * timeStep }
-    return times.any { t -> provedUnsat(makeQuery(queryBuilder(t))) }
+    return try {
+        val timeStep = tMax / 10.0
+        val times = (0..10).map { it * timeStep }
+        times.any { t -> provedUnsat(makeQuery(queryBuilder(t))) }
+    } catch (e: Timeout) {
+        false
+    }
 }
 
 private inline fun maybeSatWithin(tMax: Double = Config.tMax, queryBuilder: (Double) -> String): Boolean {
-    val timeStep = tMax / 5.0
-    val times = (0..5).map { it * timeStep }
-    return times.any { t -> !provedUnsat(makeQuery(queryBuilder(t))) }
+    return try {
+        val timeStep = tMax / 5.0
+        val times = (0..5).map { it * timeStep }
+        times.any { t -> !provedUnsat(makeQuery(queryBuilder(t))) }
+    } catch (e: Timeout) {
+        false
+    }
 }
 
 /*

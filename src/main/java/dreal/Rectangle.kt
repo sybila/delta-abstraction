@@ -47,6 +47,14 @@ data class Rectangle(
         }
     }
 
+    fun contains(dim: Int, value: Double): Boolean = value >= bounds[2*dim] && value <= bounds[2*dim + 1]
+
+    fun project(dim: Int): Rectangle = Rectangle(DoubleArray(bounds.size - 2) { i ->
+        val d = i / 2
+        if (d < dim) bounds[i]
+        else bounds[i+2]
+    })
+
     fun size(dimension: Int): Double = bounds[2 * dimension + 1] - bounds[2 * dimension]
 
     fun bound(dimension: Int, high: Boolean): Double = bounds[2 * dimension + if (high) 1 else 0]
@@ -88,7 +96,7 @@ data class Rectangle(
         val degeneracy = intersection.mapIntervals { a, b -> if (a == b) 1 else 0 }
         val degenerateDimensions = degeneracy.sum()
         return when {
-            degenerateDimensions == 0 -> error("Rectangles have non-degenerate intersection!")
+            degenerateDimensions == 0 -> error("Rectangles $this and $other have non-degenerate intersection!")
             degenerateDimensions > 1 -> {
                 null
             }

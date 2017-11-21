@@ -1,3 +1,4 @@
+
 import dreal.project.Delta
 import dreal.project.PWMA
 import dreal.project.TaskGraph
@@ -239,10 +240,10 @@ fun main(args: Array<String>) {
     PWMA.Approximation
     PWMA.Partition
     PWMA.Partition.Svg
-    PWMA.Transitions
-    PWMA.Transitions.Svg
-    PWMA.TerminalComponents
-    PWMA.TerminalComponents.Svg
+    //PWMA.Transitions
+    //PWMA.Transitions.Svg
+    //PWMA.TerminalComponents
+    //PWMA.TerminalComponents.Svg
     Delta.Rectangular.All
     Delta.Rectangular.All.Svg
     Delta.Rectangular.States

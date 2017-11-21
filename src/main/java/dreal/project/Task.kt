@@ -72,7 +72,23 @@ abstract class PartitionSvgTask(outputName: String, private val task: JsonTask<P
 
     override fun run() {
         val partition = task.readJson()
-        writeSvg(SvgImage(partition.items.map { it.bounds.toSvgRectangle() }, 0.0))
+        val dimen = partition.items.first().bounds.dimensions
+        if (dimen == 2) {
+            writeSvg(SvgImage(partition.items.map { it.bounds.toSvgRectangle() }, 0.0))
+        } else if (dimen == 3) {
+            val thresholds = partition.items.asSequence().flatMap {
+                sequenceOf(it.bounds.bound(2, false), it.bounds.bound(2, true))
+            }.toSet()
+            thresholds.forEach { t ->
+                val newPartition = partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { it.project(2) }
+                Config  .projectFile(t.toString()+"_"+output.name)
+                        .writeText(
+                                SvgImage(newPartition.map { it.toSvgRectangle() }, 0.0)
+                                    .normalize(Config.targetWidth)
+                                    .compileSvg()
+                        )
+            }
+        }
     }
 
 }
@@ -85,7 +101,33 @@ abstract class DeltaTransitionSystemSvgTask(outputName: String,
     override fun run() {
         val partition = partition.readJson()
         val transitions = states.readJson()
-        writeImage(DeltaImage(partition, transitions, emptySet()))
+        val dimen = partition.items.first().bounds.dimensions
+        if (dimen == 2) {
+            writeImage(DeltaImage(partition, transitions, emptySet()))
+        } else if (dimen == 3) {
+            val thresholds = partition.items.asSequence().flatMap {
+                sequenceOf(it.bounds.bound(2, false), it.bounds.bound(2, true))
+            }.toSet()
+            thresholds.forEach { t ->
+                val newPartition = Partitioning(partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { Partitioning.Item(it.project(2)) })
+                val newStates = transitions.states.map {
+                    if (!it.contains(2, t)) null else it.project(2)
+                }
+                val newStateList = newStates.filterNotNull()
+                val newEdges = transitions.edges.mapNotNull { (s,t) ->
+                    val start = newStates[s]
+                    val target = newStates[t]
+                    if (start == null || target == null) null else {
+                        newStateList.indexOf(start) to newStateList.indexOf(target)
+                    }
+                }
+                Config  .projectFile(t.toString()+"_"+output.name)
+                        .writeText(
+                                DeltaImage(newPartition, TransitionSystem(newStateList, newEdges), emptySet())
+                                        .toSvgImage().normalize(Config.targetWidth).compileSvg()
+                        )
+            }
+        }
     }
 
 }
@@ -100,7 +142,34 @@ abstract class DeltaTransitionSystemPropertySvgTask(outputName: String,
         val partition = partition.readJson()
         val transitions = states.readJson()
         val prop = property.readJson()
-        writeImage(DeltaImage(partition, transitions, prop.toSet()))
+        val dimen = partition.items.first().bounds.dimensions
+        if (dimen == 2) {
+            writeImage(DeltaImage(partition, transitions, prop.toSet()))
+        } else if (dimen == 3) {
+            val thresholds = partition.items.asSequence().flatMap {
+                sequenceOf(it.bounds.bound(2, false), it.bounds.bound(2, true))
+            }.toSet()
+            thresholds.forEach { t ->
+                val newPartition = Partitioning(partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { Partitioning.Item(it.project(2)) })
+                val newStates = transitions.states.map {
+                    if (!it.contains(2, t)) null else it.project(2)
+                }
+                val newProp = prop.filter { it.contains(2, t) }.map { it.project(2) }
+                val newStateList = newStates.filterNotNull()
+                val newEdges = transitions.edges.mapNotNull { (s,t) ->
+                    val start = newStates[s]
+                    val target = newStates[t]
+                    if (start == null || target == null) null else {
+                        newStateList.indexOf(start) to newStateList.indexOf(target)
+                    }
+                }
+                Config  .projectFile(t.toString()+"_"+output.name)
+                        .writeText(
+                                DeltaImage(newPartition, TransitionSystem(newStateList, newEdges), newProp.toSet())
+                                        .toSvgImage().normalize(Config.targetWidth).compileSvg()
+                        )
+            }
+        }
     }
 
 }
