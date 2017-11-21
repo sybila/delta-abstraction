@@ -10,8 +10,6 @@ import kotlin.coroutines.experimental.buildSequence
 
 fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
 
-    println(partitioning.items.map { it.bounds })
-
     val rectangles = partitioning.items.map { it.bounds }
     val stateSpace = buildSequence {
         yield(State.Exterior)
@@ -52,9 +50,6 @@ fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
             } + State.Exterior
         }).map { index[start]!! to index[it]!! }
     }
-
-    println(stateSpace)
-    println(edges)
 
     return DeltaModel(partitioning, this, TransitionSystem(stateSpace, edges))
 }
