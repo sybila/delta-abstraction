@@ -136,7 +136,7 @@ object Delta {
             }
 
             object Svg : DeltaTransitionSystemPropertySvgTask("initial.delta.rect.svg",
-                    PWMA.Partition, Transitions, TerminalComponents
+                    PWMA.Partition, Transitions, InitialComponents
             )
         }
 
