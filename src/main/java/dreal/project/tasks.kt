@@ -156,6 +156,58 @@ object Delta {
             )
         }
 
+        object BlenderExportTerminal : Task("terminal.delta.rect.py") {
+            override fun run() {
+                val terminal = TerminalComponents.readJson()
+                val rectangles = terminal.mapNotNull { when (it) {
+                    is State.Exterior -> null
+                    is State.Interior -> it.rectangle
+                    is State.Transition -> it.to
+                } }.toSet()
+
+                val commands = rectangles.map { r ->
+                    val location = DoubleArray(3) { i ->
+                        (r.bound(i, false) + r.bound(i, true)) / 2
+                    }.joinToString(separator = ",")
+                    val proportions = DoubleArray(3) { i ->
+                        val size = r.bound(i, true) - r.bound(i, false)
+                        size/2  // default cube has size 2
+                    }.joinToString(separator = ",")
+                    //println("Rectangle $r at $location with resize $proportions")
+                    """
+                        bpy.ops.mesh.primitive_cube_add(location=($location))
+                        bpy.ops.transform.resize(value=($proportions))
+                        bpy.context.active_object.data.materials.append(solid)
+                    """
+
+                }
+
+                val script = """
+                import bpy
+
+                solid = bpy.data.materials.get("solid")
+                if solid is None:
+                        solid = bpy.data.materials.new(name = "solid")
+                        solid.diffuse_color = (0.8, 0.8, 1.0)
+                        solid.specular_intensity = 0.0
+                        solid.emit = 0.5
+
+                wire = bpy.data.materials.get("wire")
+                if wire is None:
+                        wire = bpy.data.materials.new(name = "wire")
+                        wire.type = 'WIRE'
+                        wire.diffuse_color = (0.0, 0.0, 0.0)
+                        wire.specular_intensity = 0.0
+                        wire.offset_z = 0.01
+                        wire.use_transparency = True
+                        wire.emit = 0.5
+
+                ${commands.joinToString(separator = "\n")}
+                """
+                output.writeText(script)
+            }
+        }
+
     }
 
 }
