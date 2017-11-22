@@ -23,8 +23,8 @@ data class Rectangle(
                     sequenceOf(getFacet(it, true), getFacet(it, false))
                 }
 
-    val degenrateDimensions: Int
-        get() = bounds.mapIntervals { a, b -> if (a == b) 1 else 0 }.sum()
+    @Transient
+    val degenrateDimensions: Int = bounds.mapIntervals { a, b -> if (a == b) 1 else 0 }.sum()
 
     init {
         if (bounds.size % 2 == 1) error("Bounds array in $this has an odd length.")

@@ -29,3 +29,6 @@ build
 .gradle
 
 pol/*.json
+
+*.svg
+*.json

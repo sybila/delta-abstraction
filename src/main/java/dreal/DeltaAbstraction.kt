@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.experimental.buildSequence
 
-fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
+suspend fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
 
     val rectangles = partitioning.items.map { it.bounds }
     val stateSpace = buildSequence {
@@ -37,19 +37,24 @@ fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
 
     val index = stateSpace.mapIndexed { i, s -> s to i }.toMap()
 
-    val edges = stateSpace.flatMap { start ->
+    println("Has states: ${stateSpace.size}")
+
+    val count = AtomicInteger(0)
+    val edges = stateSpace.map { start -> async(Config.threadPool) {
+        count.incrementAndGet()
+        if (count.get() % 1000 == 0) println("C: $count")
         (when (start) {
             is State.Interior -> stateSpace.filter { it == start || (it is State.Transition && it.from == start.rectangle) }
             is State.Transition -> stateSpace.filter {
                 (it is State.Interior && it.rectangle == start.to) ||
-                (it is State.Transition && start.to.degenrateDimensions == 0 && it.from == start.to) ||
-                (it is State.Exterior && start.to.degenrateDimensions > 0)
+                        (it is State.Transition && start.to.degenrateDimensions == 0 && it.from == start.to) ||
+                        (it is State.Exterior && start.to.degenrateDimensions > 0)
             }
             is State.Exterior -> stateSpace.filter {
                 it is State.Transition && it.from.degenrateDimensions > 0
             } + State.Exterior
         }).map { index[start]!! to index[it]!! }
-    }
+    } }.flatMap { it.await() }
 
     return DeltaModel(partitioning, this, TransitionSystem(stateSpace, edges))
 }

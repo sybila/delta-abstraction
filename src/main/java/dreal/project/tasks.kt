@@ -82,7 +82,9 @@ object Delta {
                 val model = PWMA.Approximation.readBio().toModelFactory()
                 val partition = PWMA.Partition.readJson()
 
-                writeJson(model.makeStateSpace(partition).system)
+                runBlocking {
+                    writeJson(model.makeStateSpace(partition).system)
+                }
             }
 
             object Svg : DeltaTransitionSystemSvgTask("ts.all.delta.rect.svg", PWMA.Partition, All)
