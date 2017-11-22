@@ -1,9 +1,6 @@
 package dreal
 
-import com.github.sybila.ode.model.Evaluable
-import com.github.sybila.ode.model.OdeModel
-import com.github.sybila.ode.model.Pow
-import com.github.sybila.ode.model.RampApproximation
+import com.github.sybila.ode.model.*
 
 fun OdeModel.toModelFactory() = object : ModelFactory {
 
@@ -47,5 +44,6 @@ fun Evaluable.toSMT(names: List<String>): String = when (this) {
             else -> error("unsupported evaluable $this")
         }
     }
+    is Hill -> "(+ $a (/ (- $b $a) (+ 1 (pow (/ $theta ${names[varIndex]}) $n))))"   //a + (b - a) * (1 / (1 + Math.pow(theta/value, n)))
     else -> error("unsupported evaluable $this")
 }
