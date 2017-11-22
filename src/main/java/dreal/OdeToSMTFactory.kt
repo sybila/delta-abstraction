@@ -44,6 +44,12 @@ fun Evaluable.toSMT(names: List<String>): String = when (this) {
             else -> error("unsupported evaluable $this")
         }
     }
-    is Hill -> "(+ $a (/ (- $b $a) (+ 1 (pow (/ $theta ${names[varIndex]}) $n))))"   //a + (b - a) * (1 / (1 + Math.pow(theta/value, n)))
+    is Hill -> {
+        when {
+            a == 1.0 && b == 0.0 -> "(/ (${Math.pow(theta, n)}) (+ ${Math.pow(theta, n)} (* ${(0 until n.toInt()).joinToString(separator = " ") { names[varIndex] }})))"
+            a == 1.0 && b == 1.0 -> "(/ (* ${(0 until n.toInt()).joinToString(separator = " ") { names[varIndex] }}) (+ ${(0 until n.toInt()).joinToString(separator = " ") { names[varIndex] }} ${Math.pow(theta, n)}))"
+            else -> "(+ $a (/ (- $b $a) (+ 1 (pow (/ $theta ${names[varIndex]}) $n))))" //a + (b - a) * (1 / (1 + Math.pow(theta/value, n)))
+        }
+    }
     else -> error("unsupported evaluable $this")
 }
