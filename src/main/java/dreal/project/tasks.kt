@@ -292,11 +292,35 @@ object Delta {
         object Diagonal : JsonTask<Partitioning>("partition.tile.json", type<Partitioning>(), ModelFile) {
             override fun run() {
                 val model = ModelFile.readBio()
-                val tSize = model.variables.map { (it.range.second - it.range.first) / 10 }.min() ?: 0.0
+                val tSize = model.variables.map { (it.range.second - it.range.first) / 20 }.min() ?: 0.0
                 val t2Size = 2*tSize
 
                 val (xL, xH) = model.variables[0].range
                 val (yL, yH) = model.variables[1].range
+
+                val tX = buildSequence {
+                    var t = xL
+                    while (t < xH) {
+                        yield(t)
+                        t += tSize
+                    }
+                    yield(xH)
+                }
+
+                val tY = buildSequence {
+                    var t = yL
+                    while (t < yH) {
+                        yield(t)
+                        t += tSize
+                    }
+                    yield(yH)
+                }
+
+                println(tX)
+                println(tY)
+
+                fun thX(t: Double): Double = tX.map { it to Math.abs(t-it) }.minBy { it.second }!!.first
+                fun thY(t: Double): Double = tY.map { it to Math.abs(t-it) }.minBy { it.second }!!.first
 
                 val rectangles = buildSequence {
 
@@ -305,7 +329,12 @@ object Delta {
                     do {
                         var shift = 0.0
                         do {
-                            val r = Rectangle(doubleArrayOf(xL + shift, xL + shift + t2Size, yL + level + shift, yL + level + tSize + shift))
+                            val r = Rectangle(doubleArrayOf(
+                                    thX(xL + shift),
+                                    thX(xL + shift + t2Size),
+                                    thY(yL + level + shift),
+                                    thY(yL + level + tSize + shift))
+                            )
                             yield(r)
                             shift += tSize
                         } while (xL + shift < xH && yL + level + shift < yH)
@@ -315,7 +344,12 @@ object Delta {
                     do {
                         var shift = 0.0
                         do {
-                            val r = Rectangle(doubleArrayOf(xL + level + shift, xL + level + shift + t2Size, yL + shift, yL + tSize + shift))
+                            val r = Rectangle(doubleArrayOf(
+                                    thX(xL + level + shift),
+                                    thX(xL + level + shift + t2Size),
+                                    thY(yL + shift),
+                                    thY(yL + tSize + shift))
+                            )
                             yield(r)
                             shift += tSize
                         } while (xL + shift < xH && yL + level + shift < yH)
@@ -327,7 +361,12 @@ object Delta {
                     do {
                         var shift = 0.0
                         do {
-                            val r = Rectangle(doubleArrayOf(xL + shift, xL + shift + tSize, yL + level + shift, yL + level + shift + t2Size))
+                            val r = Rectangle(doubleArrayOf(
+                                    thX(xL + shift),
+                                    thX(xL + shift + tSize),
+                                    thY(yL + level + shift),
+                                    thY(yL + level + shift + t2Size))
+                            )
                             yield(r)
                             shift += tSize
                         } while (xL + shift < xH && yL + level + shift < yH)
@@ -337,7 +376,12 @@ object Delta {
                     do {
                         var shift = 0.0
                         do {
-                            val r = Rectangle(doubleArrayOf(xL + level + shift, xL + level + shift + tSize, yL + shift, yL + t2Size + shift))
+                            val r = Rectangle(doubleArrayOf(
+                                    thX(xL + level + shift),
+                                    thX(xL + level + shift + tSize),
+                                    thY(yL + shift),
+                                    thY(yL + t2Size + shift))
+                            )
                             yield(r)
                             shift += tSize
                         } while (xL + shift < xH && yL + level + shift < yH)
