@@ -300,7 +300,7 @@ object Delta {
 
                 val tX = buildSequence {
                     var t = xL
-                    while (t < xH) {
+                    while (t < xH - 0.1) {
                         yield(t)
                         t += tSize
                     }
@@ -309,7 +309,7 @@ object Delta {
 
                 val tY = buildSequence {
                     var t = yL
-                    while (t < yH) {
+                    while (t < yH - 0.1) {
                         yield(t)
                         t += tSize
                     }
