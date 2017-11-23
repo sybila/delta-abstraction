@@ -4,6 +4,7 @@ import com.github.sybila.ode.model.OdeModel
 import com.github.sybila.ode.model.Parser
 import com.github.sybila.ode.model.toBio
 import com.google.gson.reflect.TypeToken
+import dreal.Rectangle
 import dreal.State
 import svg.DeltaImage
 import svg.Image
@@ -68,13 +69,18 @@ abstract class SvgTask(outputName: String, dependencies: List<Task>) : Task(outp
 
 }
 
-abstract class PartitionSvgTask(outputName: String, private val task: JsonTask<Partitioning>) : SvgTask(outputName, task) {
+abstract class PartitionSvgTask(outputName: String, private val task: JsonTask<Partitioning>) : SvgTask(outputName, task, ModelFile) {
 
     override fun run() {
         val partition = task.readJson()
+        val model = ModelFile.readBio()
+        val bounds = Rectangle(DoubleArray(2*model.variables.size) { i ->
+            val dim = i / 2
+            if (i % 2 == 0) model.variables[dim].range.first else model.variables[dim].range.second
+        }).toSvgRectangle()
         val dimen = partition.items.first().bounds.dimensions
         if (dimen == 2) {
-            writeSvg(SvgImage(partition.items.map { it.bounds.toSvgRectangle() }, 0.0))
+            writeSvg(SvgImage(partition.items.map { it.bounds.toSvgRectangle() } + listOf(bounds), 0.0))
         } else if (dimen == 3) {
             val thresholds = partition.items.asSequence().flatMap {
                 sequenceOf(it.bounds.bound(2, false), it.bounds.bound(2, true))
@@ -83,7 +89,7 @@ abstract class PartitionSvgTask(outputName: String, private val task: JsonTask<P
                 val newPartition = partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { it.project(2) }
                 Config  .projectFile("${output.name}_$t.svg")
                         .writeText(
-                                SvgImage(newPartition.map { it.toSvgRectangle() }, 0.0)
+                                SvgImage(newPartition.map { it.toSvgRectangle() } + listOf(bounds), 0.0)
                                     .normalize(Config.targetWidth)
                                     .compileSvg()
                         )

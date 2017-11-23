@@ -10,8 +10,8 @@ fun main(args: Array<String>) {
     //PWMA.Partition
     //Delta.Tile.Herringbone
     //Delta.Tile.Herringbone.Svg
-    Delta.Tile.BasketWeave
-    Delta.Tile.BasketWeave.Svg
+    Delta.Tile.Diagonal
+    Delta.Tile.Diagonal.Svg
     /*//PWMA.Herringbone.Svg
     //PWMA.Transitions
     //PWMA.Transitions.Svg
@@ -34,7 +34,7 @@ fun main(args: Array<String>) {
 
     //Delta.Rectangular.BlenderExportTerminal*/
 
-    makeExperiments(Delta.Tile.BasketWeave)
+    makeExperiments(Delta.Tile.Diagonal)
 
     TaskGraph.make()
 }

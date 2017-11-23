@@ -141,7 +141,7 @@ fun makeExperiments(partitioning: JsonTask<Partitioning>) = object {
                 partitioning, Transitions, this
         )
     }
-
+/*
     val Cycles = object : JsonTask<List<State>>("cycles.delta.json", type<List<State>>(), Transitions) {
         override fun run() {
             val ts = Transitions.readJson()
@@ -154,7 +154,7 @@ fun makeExperiments(partitioning: JsonTask<Partitioning>) = object {
         val Svg = DeltaTransitionSystemPropertySvgTask("cycles.delta.svg",
                 partitioning, Transitions, this
         )
-    }
+    }*/
 /*
     val BlenderExportTerminal = object : Task("terminal.delta.py", TerminalComponents) {
         override fun run() {
@@ -284,6 +284,68 @@ object Delta {
                 }
 
                 writeJson(Partitioning(items))
+            }
+
+            object Svg : PartitionSvgTask("partition.tile.svg", BasketWeave)
+        }
+
+        object Diagonal : JsonTask<Partitioning>("partition.tile.json", type<Partitioning>(), ModelFile) {
+            override fun run() {
+                val model = ModelFile.readBio()
+                val tSize = model.variables.map { (it.range.second - it.range.first) / 10 }.min() ?: 0.0
+                val t2Size = 2*tSize
+
+                val (xL, xH) = model.variables[0].range
+                val (yL, yH) = model.variables[1].range
+
+                val rectangles = buildSequence {
+
+                    // horizontal rectangles
+                    var level = 0.0
+                    do {
+                        var shift = 0.0
+                        do {
+                            val r = Rectangle(doubleArrayOf(xL + shift, xL + shift + t2Size, yL + level + shift, yL + level + tSize + shift))
+                            yield(r)
+                            shift += tSize
+                        } while (xL + shift < xH && yL + level + shift < yH)
+                        level += 2 * t2Size
+                    } while (yL + level < yH)
+                    level = 4 * tSize
+                    do {
+                        var shift = 0.0
+                        do {
+                            val r = Rectangle(doubleArrayOf(xL + level + shift, xL + level + shift + t2Size, yL + shift, yL + tSize + shift))
+                            yield(r)
+                            shift += tSize
+                        } while (xL + shift < xH && yL + level + shift < yH)
+                        level += 2 * t2Size
+                    } while (xL + level < xH)
+
+                    // vertical rectangles
+                    level = tSize
+                    do {
+                        var shift = 0.0
+                        do {
+                            val r = Rectangle(doubleArrayOf(xL + shift, xL + shift + tSize, yL + level + shift, yL + level + shift + t2Size))
+                            yield(r)
+                            shift += tSize
+                        } while (xL + shift < xH && yL + level + shift < yH)
+                        level += 2 * t2Size
+                    } while (yL + level < yH)
+                    level = t2Size + tSize
+                    do {
+                        var shift = 0.0
+                        do {
+                            val r = Rectangle(doubleArrayOf(xL + level + shift, xL + level + shift + tSize, yL + shift, yL + t2Size + shift))
+                            yield(r)
+                            shift += tSize
+                        } while (xL + shift < xH && yL + level + shift < yH)
+                        level += 2 * t2Size
+                    } while (xL + level < xH)
+                }.toSet().map { Partitioning.Item(it) }
+
+                writeJson(Partitioning(rectangles))
             }
 
             object Svg : PartitionSvgTask("partition.tile.svg", BasketWeave)
