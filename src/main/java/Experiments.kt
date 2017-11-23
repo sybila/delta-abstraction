@@ -7,6 +7,8 @@ fun main(args: Array<String>) {
 
     PWMA.Approximation
     PWMA.Partition
+    Delta.Tile.Partition
+    Delta.Tile.Partition.Svg
     //PWMA.Partition.Svg
     //PWMA.Transitions
     //PWMA.Transitions.Svg
@@ -17,7 +19,7 @@ fun main(args: Array<String>) {
     Delta.Rectangular.States
     //Delta.Rectangular.States.Svg
     Delta.Rectangular.Transitions
-    Delta.Rectangular.Transitions.Svg
+    //Delta.Rectangular.Transitions.Svg
     Delta.Rectangular.TerminalComponents
     Delta.Rectangular.TerminalComponents.Svg
     Delta.Rectangular.InitialComponents
@@ -26,6 +28,8 @@ fun main(args: Array<String>) {
     //Delta.Rectangular.Cycles.Svg
 
     //Delta.Rectangular.Transitions.output.delete()
+
+    //Delta.Rectangular.BlenderExportTerminal
 
     TaskGraph.make()
 }

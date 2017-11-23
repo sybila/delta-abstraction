@@ -1,10 +1,12 @@
 package dreal.project
 
+import com.github.sybila.ode.generator.NodeEncoder
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.computeApproximation
 import dreal.*
 import kotlinx.coroutines.experimental.runBlocking
 import svg.PwmaImage
+import kotlin.coroutines.experimental.buildSequence
 
 object ModelFile : BioTask("model.bio")
 
@@ -75,9 +77,50 @@ object PWMA {
 
 object Delta {
 
+    object Tile {
+        object Partition : JsonTask<Partitioning>("partition.tile.json", type<Partitioning>(), ModelFile) {
+            override fun run() {
+                val model = ModelFile.readBio()
+                val rSize = model.variables.map { (it.range.second - it.range.first) / 30 }.min() ?: 0.0
+                val newVars = model.variables.map { v ->
+                    val t = buildSequence {
+                        yield(v.range.first)
+                        var k = v.range.first + rSize
+                        while (k < v.range.second) {
+                            yield(k)
+                            k += rSize
+                        }
+                        yield(v.range.second)
+                    }.toList()
+                    v.copy(thresholds = t)
+                }
+                val newModel = model.copy(variables = newVars)
+
+                val encoder = NodeEncoder(newModel)
+                val ts = RectangleOdeModel(newModel, true)
+
+                val items = (0 until ts.stateCount).flatMap { s ->
+                    val rectangle = Rectangle(newVars.indices.flatMap { i ->
+                        val t = newVars[i].thresholds
+                        listOf(t[encoder.lowerThreshold(s, i)], t[encoder.upperThreshold(s, i)])
+                    }.toDoubleArray())
+
+                    val splitDimension = encoder.decodeNode(s).map { it % encoder.dimensions }.sum() % encoder.dimensions
+
+                    val (l, h) = rectangle.split(splitDimension)
+                    listOf(Partitioning.Item(l), Partitioning.Item(h))
+                }
+
+                writeJson(Partitioning(items))
+            }
+
+            object Svg : PartitionSvgTask("partition.tile.svg", Partition)
+        }
+    }
+
     object Rectangular {
 
-        object All : JsonTask<TransitionSystem<State>>("ts.all.delta.rect.json", type<TransitionSystem<State>>(), PWMA.Approximation, PWMA.Partition) {
+        object All : JsonTask<TransitionSystem<State>>("ts.all.delta.rect.json", type<TransitionSystem<State>>(), PWMA.Approximation, Tile.Partition) {
             override fun run() {
                 val model = PWMA.Approximation.readBio().toModelFactory()
                 val partition = PWMA.Partition.readJson()
@@ -87,7 +130,7 @@ object Delta {
                 }
             }
 
-            object Svg : DeltaTransitionSystemSvgTask("ts.all.delta.rect.svg", PWMA.Partition, All)
+            object Svg : DeltaTransitionSystemSvgTask("ts.all.delta.rect.svg", Tile.Partition, All)
         }
 
         object States : JsonTask<TransitionSystem<State>>("ts.states.delta.rect.json", type<TransitionSystem<State>>(), ModelFile, All) {
@@ -101,7 +144,7 @@ object Delta {
                 }
             }
 
-            object Svg : DeltaTransitionSystemSvgTask("ts.states.delta.rect.svg", PWMA.Partition, States)
+            object Svg : DeltaTransitionSystemSvgTask("ts.states.delta.rect.svg", Tile.Partition, States)
         }
 
         object Transitions : JsonTask<TransitionSystem<State>>("ts.transitions.delta.rect.json", type<TransitionSystem<State>>(), ModelFile, States) {
@@ -115,7 +158,7 @@ object Delta {
                 }
             }
 
-            object Svg : DeltaTransitionSystemSvgTask("ts.transitions.delta.rect.svg", PWMA.Partition, Transitions)
+            object Svg : DeltaTransitionSystemSvgTask("ts.transitions.delta.rect.svg", Tile.Partition, Transitions)
         }
 
         object TerminalComponents : JsonTask<List<State>>("terminal.delta.rect.json", type<List<State>>(), Transitions) {
@@ -126,7 +169,7 @@ object Delta {
             }
 
             object Svg : DeltaTransitionSystemPropertySvgTask("terminal.delta.rect.svg",
-                    PWMA.Partition, Transitions, TerminalComponents
+                    Tile.Partition, Transitions, TerminalComponents
             )
         }
 
@@ -138,7 +181,7 @@ object Delta {
             }
 
             object Svg : DeltaTransitionSystemPropertySvgTask("initial.delta.rect.svg",
-                    PWMA.Partition, Transitions, InitialComponents
+                    Tile.Partition, Transitions, InitialComponents
             )
         }
 
@@ -152,7 +195,7 @@ object Delta {
             }
 
             object Svg : DeltaTransitionSystemPropertySvgTask("cycles.delta.rect.svg",
-                    PWMA.Partition, Transitions, Cycles
+                    Tile.Partition, Transitions, Cycles
             )
         }
 
