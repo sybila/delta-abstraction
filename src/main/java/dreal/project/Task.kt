@@ -24,7 +24,7 @@ abstract class Task(outputName: String, val dependencies: List<Task>) {
 
     open fun run() {}
 
-    override fun toString(): String = this.javaClass.canonicalName.removePrefix("dreal.project.")
+    override fun toString(): String = this.javaClass.name//.removePrefix("dreal.project.")
 }
 
 abstract class BioTask(outputName: String, dependencies: List<Task>) : Task(outputName, dependencies) {
@@ -81,7 +81,7 @@ abstract class PartitionSvgTask(outputName: String, private val task: JsonTask<P
             }.toSet()
             thresholds.forEach { t ->
                 val newPartition = partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { it.project(2) }
-                Config  .projectFile(t.toString()+"_"+output.name)
+                Config  .projectFile("${output.name}_$t.svg")
                         .writeText(
                                 SvgImage(newPartition.map { it.toSvgRectangle() }, 0.0)
                                     .normalize(Config.targetWidth)
@@ -93,7 +93,7 @@ abstract class PartitionSvgTask(outputName: String, private val task: JsonTask<P
 
 }
 
-abstract class DeltaTransitionSystemSvgTask(outputName: String,
+class DeltaTransitionSystemSvgTask(outputName: String,
                                             private val partition: JsonTask<Partitioning>,
                                             private val states: JsonTask<TransitionSystem<State>>)
     : SvgTask(outputName, partition, states) {
@@ -121,7 +121,7 @@ abstract class DeltaTransitionSystemSvgTask(outputName: String,
                         newStateList.indexOf(start) to newStateList.indexOf(target)
                     }
                 }
-                Config  .projectFile(t.toString()+"_"+output.name)
+                Config  .projectFile("${output.name}_$t.svg")
                         .writeText(
                                 DeltaImage(newPartition, TransitionSystem(newStateList, newEdges), emptySet())
                                         .toSvgImage().normalize(Config.targetWidth).compileSvg()
@@ -132,7 +132,7 @@ abstract class DeltaTransitionSystemSvgTask(outputName: String,
 
 }
 
-abstract class DeltaTransitionSystemPropertySvgTask(outputName: String,
+class DeltaTransitionSystemPropertySvgTask(outputName: String,
                                             private val partition: JsonTask<Partitioning>,
                                             private val states: JsonTask<TransitionSystem<State>>,
                                             private val property: JsonTask<List<State>>)

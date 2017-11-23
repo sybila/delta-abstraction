@@ -72,6 +72,24 @@ data class Rectangle(
         return low to high
     }
 
+    fun weave(): List<Rectangle> {
+        if (bounds.size != 4) error("Currently, we weave only on 2D rectangles :P")
+        val sizeX = bounds[1] - bounds[0]
+        val sizeY = bounds[3] - bounds[2]
+        val splitX1 = bounds[0] + (1.0/3.0) * sizeX
+        val splitX2 = bounds[0] + (2.0/3.0) * sizeX
+        val splitY1 = bounds[2] + (1.0/3.0) * sizeY
+        val splitY2 = bounds[2] + (2.0/3.0) * sizeY
+
+        return listOf(
+                Rectangle(doubleArrayOf(bounds[0], splitX1, bounds[2], splitY2)),   // left, down
+                Rectangle(doubleArrayOf(bounds[0], splitX2, splitY2, bounds[3])),   // left, up
+                Rectangle(doubleArrayOf(splitX2, bounds[1], splitY1, bounds[3])),   // right, up
+                Rectangle(doubleArrayOf(splitX1, bounds[1], bounds[2], splitY1)),   // right, down
+                Rectangle(doubleArrayOf(splitX1, splitX2, splitY1, splitY2))        // center
+        )
+    }
+
     fun getFacet(dimension: Int, positive: Boolean): Rectangle
             = Rectangle(DoubleArray(bounds.size) { i ->
         val d = i / 2

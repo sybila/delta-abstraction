@@ -75,13 +75,149 @@ object PWMA {
 
 }
 
+fun makeExperiments(partitioning: JsonTask<Partitioning>) = object {
+
+    val All = object : JsonTask<TransitionSystem<State>>("ts.all.delta.json", type<TransitionSystem<State>>(), PWMA.Approximation, partitioning) {
+        override fun run() {
+            val model = PWMA.Approximation.readBio().toModelFactory()
+            val partition = partitioning.readJson()
+
+            runBlocking {
+                writeJson(model.makeStateSpace(partition).system)
+            }
+        }
+
+        val svg = DeltaTransitionSystemSvgTask("ts.all.delta.svg", partitioning, this)
+    }
+
+    val States = object : JsonTask<TransitionSystem<State>>("ts.states.delta.json", type<TransitionSystem<State>>(), ModelFile, All) {
+        override fun run() {
+            val model = ModelFile.readBio().toModelFactory()
+            val transitions = All.readJson()
+
+            runBlocking {
+                val admissible = model.checkStates(transitions)
+                writeJson(admissible)
+            }
+        }
+
+        val svg = DeltaTransitionSystemSvgTask("ts.states.delta.svg", partitioning, this)
+    }
+
+    val Transitions = object : JsonTask<TransitionSystem<State>>("ts.transitions.delta.json", type<TransitionSystem<State>>(), ModelFile, States) {
+        override fun run() {
+            val model = ModelFile.readBio().toModelFactory()
+            val system = States.readJson()
+
+            runBlocking {
+                val admissible = model.checkTransitions(system)
+                writeJson(admissible)
+            }
+        }
+
+        val Svg = DeltaTransitionSystemSvgTask("ts.transitions.delta.svg", partitioning, this)
+    }
+
+    val TerminalComponents = object : JsonTask<List<State>>("terminal.delta.json", type<List<State>>(), Transitions) {
+        override fun run() {
+            val ts = Transitions.readJson()
+            val terminal = ts.terminalComponents()
+            writeJson(terminal.toList())
+        }
+
+        val Svg = DeltaTransitionSystemPropertySvgTask("terminal.delta.svg",
+                partitioning, Transitions, this
+        )
+    }
+
+    val InitialComponents = object : JsonTask<List<State>>("initial.delta.json", type<List<State>>(), Transitions) {
+        override fun run() {
+            val ts = Transitions.readJson()
+            val terminal = ts.terminalComponents(false)
+            writeJson(terminal.toList())
+        }
+
+        val Svg = DeltaTransitionSystemPropertySvgTask("initial.delta.svg",
+                partitioning, Transitions, this
+        )
+    }
+
+    val Cycles = object : JsonTask<List<State>>("cycles.delta.json", type<List<State>>(), Transitions) {
+        override fun run() {
+            val ts = Transitions.readJson()
+            val terminal = ts.states.filter { s ->
+                s in ts.reachSet(ts.next(setOf(s)))
+            }
+            writeJson(terminal.toList())
+        }
+
+        val Svg = DeltaTransitionSystemPropertySvgTask("cycles.delta.svg",
+                partitioning, Transitions, this
+        )
+    }
+/*
+    val BlenderExportTerminal = object : Task("terminal.delta.py", TerminalComponents) {
+        override fun run() {
+            val terminal = TerminalComponents.readJson()
+            val rectangles = terminal.mapNotNull { when (it) {
+                is State.Exterior -> null
+                is State.Interior -> it.rectangle
+                is State.Transition -> it.to
+            } }.toSet()
+
+            val commands = rectangles.map { r ->
+                val location = DoubleArray(3) { i ->
+                    (r.bound(i, false) + r.bound(i, true)) / 2
+                }.joinToString(separator = ",")
+                val proportions = DoubleArray(3) { i ->
+                    val size = r.bound(i, true) - r.bound(i, false)
+                    size/2  // default cube has size 2
+                }.joinToString(separator = ",")
+                //println("Rectangle $r at $location with resize $proportions")
+                """
+                        bpy.ops.mesh.primitive_cube_add(location=($location))
+                        bpy.ops.transform.resize(value=($proportions))
+                        bpy.context.active_object.data.materials.append(solid)
+                    """
+
+            }
+
+            val script = """
+                import bpy
+
+                solid = bpy.data.materials.get("solid")
+                if solid is None:
+                        solid = bpy.data.materials.new(name = "solid")
+                        solid.diffuse_color = (0.8, 0.8, 1.0)
+                        solid.specular_intensity = 0.0
+                        solid.emit = 0.5
+
+                wire = bpy.data.materials.get("wire")
+                if wire is None:
+                        wire = bpy.data.materials.new(name = "wire")
+                        wire.type = 'WIRE'
+                        wire.diffuse_color = (0.0, 0.0, 0.0)
+                        wire.specular_intensity = 0.0
+                        wire.offset_z = 0.01
+                        wire.use_transparency = True
+                        wire.emit = 0.5
+
+                ${commands.joinToString(separator = "\n")}
+                """
+            output.writeText(script)
+        }
+    }*/
+
+}
+
 object Delta {
 
+    // https://www.bunnings.com.au/diy-advice/home-improvement/tiles/10-tile-patterns-you-need-to-know
     object Tile {
-        object Partition : JsonTask<Partitioning>("partition.tile.json", type<Partitioning>(), ModelFile) {
+        object Herringbone : JsonTask<Partitioning>("partition.tile.json", type<Partitioning>(), ModelFile) {
             override fun run() {
                 val model = ModelFile.readBio()
-                val rSize = model.variables.map { (it.range.second - it.range.first) / 30 }.min() ?: 0.0
+                val rSize = model.variables.map { (it.range.second - it.range.first) / 20 }.min() ?: 0.0
                 val newVars = model.variables.map { v ->
                     val t = buildSequence {
                         yield(v.range.first)
@@ -114,143 +250,44 @@ object Delta {
                 writeJson(Partitioning(items))
             }
 
-            object Svg : PartitionSvgTask("partition.tile.svg", Partition)
+            object Svg : PartitionSvgTask("partition.tile.svg", Herringbone)
         }
-    }
 
-    object Rectangular {
-
-        object All : JsonTask<TransitionSystem<State>>("ts.all.delta.rect.json", type<TransitionSystem<State>>(), PWMA.Approximation, Tile.Partition) {
+        object BasketWeave : JsonTask<Partitioning>("partition.tile.json", type<Partitioning>(), ModelFile) {
             override fun run() {
-                val model = PWMA.Approximation.readBio().toModelFactory()
-                val partition = PWMA.Partition.readJson()
-
-                runBlocking {
-                    writeJson(model.makeStateSpace(partition).system)
+                val model = ModelFile.readBio()
+                val rSize = model.variables.map { (it.range.second - it.range.first) / 20 }.min() ?: 0.0
+                val newVars = model.variables.map { v ->
+                    val t = buildSequence {
+                        yield(v.range.first)
+                        var k = v.range.first + rSize
+                        while (k < v.range.second) {
+                            yield(k)
+                            k += rSize
+                        }
+                        yield(v.range.second)
+                    }.toList()
+                    v.copy(thresholds = t)
                 }
-            }
+                val newModel = model.copy(variables = newVars)
 
-            object Svg : DeltaTransitionSystemSvgTask("ts.all.delta.rect.svg", Tile.Partition, All)
-        }
+                val encoder = NodeEncoder(newModel)
+                val ts = RectangleOdeModel(newModel, true)
 
-        object States : JsonTask<TransitionSystem<State>>("ts.states.delta.rect.json", type<TransitionSystem<State>>(), ModelFile, All) {
-            override fun run() {
-                val model = ModelFile.readBio().toModelFactory()
-                val transitions = All.readJson()
+                val items = (0 until ts.stateCount).flatMap { s ->
+                    val rectangle = Rectangle(newVars.indices.flatMap { i ->
+                        val t = newVars[i].thresholds
+                        listOf(t[encoder.lowerThreshold(s, i)], t[encoder.upperThreshold(s, i)])
+                    }.toDoubleArray())
 
-                runBlocking {
-                    val admissible = model.checkStates(transitions)
-                    writeJson(admissible)
-                }
-            }
-
-            object Svg : DeltaTransitionSystemSvgTask("ts.states.delta.rect.svg", Tile.Partition, States)
-        }
-
-        object Transitions : JsonTask<TransitionSystem<State>>("ts.transitions.delta.rect.json", type<TransitionSystem<State>>(), ModelFile, States) {
-            override fun run() {
-                val model = ModelFile.readBio().toModelFactory()
-                val system = States.readJson()
-
-                runBlocking {
-                    val admissible = model.checkTransitions(system)
-                    writeJson(admissible)
-                }
-            }
-
-            object Svg : DeltaTransitionSystemSvgTask("ts.transitions.delta.rect.svg", Tile.Partition, Transitions)
-        }
-
-        object TerminalComponents : JsonTask<List<State>>("terminal.delta.rect.json", type<List<State>>(), Transitions) {
-            override fun run() {
-                val ts = Transitions.readJson()
-                val terminal = ts.terminalComponents()
-                writeJson(terminal.toList())
-            }
-
-            object Svg : DeltaTransitionSystemPropertySvgTask("terminal.delta.rect.svg",
-                    Tile.Partition, Transitions, TerminalComponents
-            )
-        }
-
-        object InitialComponents : JsonTask<List<State>>("initial.delta.rect.json", type<List<State>>(), Transitions) {
-            override fun run() {
-                val ts = Transitions.readJson()
-                val terminal = ts.terminalComponents(false)
-                writeJson(terminal.toList())
-            }
-
-            object Svg : DeltaTransitionSystemPropertySvgTask("initial.delta.rect.svg",
-                    Tile.Partition, Transitions, InitialComponents
-            )
-        }
-
-        object Cycles : JsonTask<List<State>>("cycles.delta.rect.json", type<List<State>>(), Transitions) {
-            override fun run() {
-                val ts = Transitions.readJson()
-                val terminal = ts.states.filter { s ->
-                    s in ts.reachSet(ts.next(setOf(s)))
-                }
-                writeJson(terminal.toList())
-            }
-
-            object Svg : DeltaTransitionSystemPropertySvgTask("cycles.delta.rect.svg",
-                    Tile.Partition, Transitions, Cycles
-            )
-        }
-
-        object BlenderExportTerminal : Task("terminal.delta.rect.py") {
-            override fun run() {
-                val terminal = TerminalComponents.readJson()
-                val rectangles = terminal.mapNotNull { when (it) {
-                    is State.Exterior -> null
-                    is State.Interior -> it.rectangle
-                    is State.Transition -> it.to
-                } }.toSet()
-
-                val commands = rectangles.map { r ->
-                    val location = DoubleArray(3) { i ->
-                        (r.bound(i, false) + r.bound(i, true)) / 2
-                    }.joinToString(separator = ",")
-                    val proportions = DoubleArray(3) { i ->
-                        val size = r.bound(i, true) - r.bound(i, false)
-                        size/2  // default cube has size 2
-                    }.joinToString(separator = ",")
-                    //println("Rectangle $r at $location with resize $proportions")
-                    """
-                        bpy.ops.mesh.primitive_cube_add(location=($location))
-                        bpy.ops.transform.resize(value=($proportions))
-                        bpy.context.active_object.data.materials.append(solid)
-                    """
-
+                    rectangle.weave().map { Partitioning.Item(it) }
                 }
 
-                val script = """
-                import bpy
-
-                solid = bpy.data.materials.get("solid")
-                if solid is None:
-                        solid = bpy.data.materials.new(name = "solid")
-                        solid.diffuse_color = (0.8, 0.8, 1.0)
-                        solid.specular_intensity = 0.0
-                        solid.emit = 0.5
-
-                wire = bpy.data.materials.get("wire")
-                if wire is None:
-                        wire = bpy.data.materials.new(name = "wire")
-                        wire.type = 'WIRE'
-                        wire.diffuse_color = (0.0, 0.0, 0.0)
-                        wire.specular_intensity = 0.0
-                        wire.offset_z = 0.01
-                        wire.use_transparency = True
-                        wire.emit = 0.5
-
-                ${commands.joinToString(separator = "\n")}
-                """
-                output.writeText(script)
+                writeJson(Partitioning(items))
             }
-        }
 
+            object Svg : PartitionSvgTask("partition.tile.svg", BasketWeave)
+        }
     }
 
 }

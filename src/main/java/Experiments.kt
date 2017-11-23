@@ -2,20 +2,23 @@
 import dreal.project.Delta
 import dreal.project.PWMA
 import dreal.project.TaskGraph
+import dreal.project.makeExperiments
 
 fun main(args: Array<String>) {
 
     PWMA.Approximation
-    PWMA.Partition
-    Delta.Tile.Partition
-    Delta.Tile.Partition.Svg
-    //PWMA.Partition.Svg
+    //PWMA.Partition
+    //Delta.Tile.Herringbone
+    //Delta.Tile.Herringbone.Svg
+    Delta.Tile.BasketWeave
+    Delta.Tile.BasketWeave.Svg
+    /*//PWMA.Herringbone.Svg
     //PWMA.Transitions
     //PWMA.Transitions.Svg
     //PWMA.TerminalComponents
     //PWMA.TerminalComponents.Svg
     Delta.Rectangular.All
-    //Delta.Rectangular.All.Svg
+    Delta.Rectangular.All.Svg
     Delta.Rectangular.States
     //Delta.Rectangular.States.Svg
     Delta.Rectangular.Transitions
@@ -29,7 +32,9 @@ fun main(args: Array<String>) {
 
     //Delta.Rectangular.Transitions.output.delete()
 
-    //Delta.Rectangular.BlenderExportTerminal
+    //Delta.Rectangular.BlenderExportTerminal*/
+
+    makeExperiments(Delta.Tile.BasketWeave)
 
     TaskGraph.make()
 }
