@@ -1,0 +1,12 @@
+VARS: x,y,z
+
+
+EQ: x = -y - z
+EQ: y = x + 0.1 * y
+EQ: z = 0.2 + z * x + z * 5.7
+
+VAR_POINTS: x: 1500, 30; y: 1500, 30; z: 1500, 20
+
+THRES: x: -15, 15
+THRES: y: -15, 15
+THRES: z: 0, 10
