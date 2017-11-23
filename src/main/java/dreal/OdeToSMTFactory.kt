@@ -19,7 +19,9 @@ fun OdeModel.toModelFactory() = object : ModelFactory {
         val eq = ode.variables[i].equation
         val summands = eq.map { s ->
             val m = listOf(s.constant.toString()) + s.variableIndices.map { names[it] } + s.evaluable.map { it.toSMT(names) }
-            "(* ${m.joinToString(separator = " ")})"
+            if (m.size == 1) "(${m[0]})" else {
+                "(* ${m.joinToString(separator = " ")})"
+            }
         }
         return "(+ ${summands.joinToString(separator = " ")})"
     }
