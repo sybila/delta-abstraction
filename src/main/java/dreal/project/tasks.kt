@@ -292,8 +292,8 @@ object Delta {
         object Diagonal : JsonTask<Partitioning>("partition.tile.json", type<Partitioning>(), ModelFile) {
             override fun run() {
                 val model = ModelFile.readBio()
-                val tSize = model.variables.map { (it.range.second - it.range.first) / 20 }.min() ?: 0.0
-                val t2Size = 2*tSize
+                val tSize = model.variables.map { (it.range.second - it.range.first) / 80 }.min() ?: 0.0
+                val t2Size = 3*tSize
 
                 val (xL, xH) = model.variables[0].range
                 val (yL, yH) = model.variables[1].range
@@ -340,7 +340,7 @@ object Delta {
                         } while (xL + shift < xH && yL + level + shift < yH)
                         level += 2 * t2Size
                     } while (yL + level < yH)
-                    level = 4 * tSize
+                    level = 2 * t2Size
                     do {
                         var shift = 0.0
                         do {
@@ -372,7 +372,7 @@ object Delta {
                         } while (xL + shift < xH && yL + level + shift < yH)
                         level += 2 * t2Size
                     } while (yL + level < yH)
-                    level = t2Size + tSize
+                    level = 2 * t2Size - tSize
                     do {
                         var shift = 0.0
                         do {
