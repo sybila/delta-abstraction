@@ -84,9 +84,9 @@ abstract class PartitionSvgTask(outputName: String, private val task: JsonTask<P
             val thresholds = partition.items.asSequence().flatMap {
                 sequenceOf(it.bounds.bound(2, false), it.bounds.bound(2, true))
             }.toSet()
-            thresholds.forEach { t ->
+            thresholds.forEachIndexed { i, t ->
                 val newPartition = partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { it.project(2) }
-                Config  .projectFile("${output.name}_$t.svg")
+                Config  .projectFile("${output.name}_${i}_$t.svg")
                         .writeText(
                                 SvgImage(newPartition.map { it.toSvgRectangle() }/* + listOf(bounds)*/, 0.0)
                                     .normalize(Config.targetWidth)
@@ -113,7 +113,7 @@ class DeltaTransitionSystemSvgTask(outputName: String,
             val thresholds = partition.items.asSequence().flatMap {
                 sequenceOf(it.bounds.bound(2, false), it.bounds.bound(2, true))
             }.toSet()
-            thresholds.forEach { t ->
+            thresholds.forEachIndexed { i, t ->
                 val newPartition = Partitioning(partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { Partitioning.Item(it.project(2)) })
                 val newStates = transitions.states.map {
                     if (!it.contains(2, t)) null else it.project(2)
@@ -126,7 +126,7 @@ class DeltaTransitionSystemSvgTask(outputName: String,
                         newStateList.indexOf(start) to newStateList.indexOf(target)
                     }
                 }
-                Config  .projectFile("${output.name}_$t.svg")
+                Config  .projectFile("${output.name}_${i}_$t.svg")
                         .writeText(
                                 DeltaImage(newPartition, TransitionSystem(newStateList, newEdges), emptySet())
                                         .toSvgImage().normalize(Config.targetWidth).compileSvg()
@@ -154,7 +154,7 @@ class DeltaTransitionSystemPropertySvgTask(outputName: String,
             val thresholds = partition.items.asSequence().flatMap {
                 sequenceOf(it.bounds.bound(2, false), it.bounds.bound(2, true))
             }.toSet()
-            thresholds.forEach { t ->
+            thresholds.forEachIndexed { i, t ->
                 val newPartition = Partitioning(partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { Partitioning.Item(it.project(2)) })
                 val newStates = transitions.states.map {
                     if (!it.contains(2, t)) null else it.project(2)
@@ -168,7 +168,7 @@ class DeltaTransitionSystemPropertySvgTask(outputName: String,
                         newStateList.indexOf(start) to newStateList.indexOf(target)
                     }
                 }
-                Config  .projectFile("${output.name}_$t.svg")
+                Config  .projectFile("${output.name}_${i}_$t.svg")
                         .writeText(
                                 DeltaImage(newPartition, TransitionSystem(newStateList, newEdges), newProp.toSet())
                                         .toSvgImage().normalize(Config.targetWidth).compileSvg()
