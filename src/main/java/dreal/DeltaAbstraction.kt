@@ -305,9 +305,9 @@ suspend fun ModelFactory.checkTransitions(system: TransitionSystem<State>): Tran
     return TransitionSystem(system.states, admissibleTransitions)
 }
 
-private inline fun List<String>.makeLines(action: (Int, String) -> String): String = this.mapIndexed(action).joinToString(separator = "\n")
+internal inline fun List<String>.makeLines(action: (Int, String) -> String): String = this.mapIndexed(action).joinToString(separator = "\n")
 
-private fun Rectangle.interval(dim: Int): String = "[${bound(dim, false)}, ${bound(dim, true)}]"
+internal fun Rectangle.interval(dim: Int): String = "[${bound(dim, false)}, ${bound(dim, true)}]"
 
 private suspend inline fun <T: Any> List<T>.filterParallel(crossinline action: (T) -> Boolean): List<T> {
     val lastPrint = AtomicLong(0L)

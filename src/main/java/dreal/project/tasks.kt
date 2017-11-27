@@ -289,6 +289,115 @@ object Delta {
             object Svg : PartitionSvgTask("partition.tile.svg", BasketWeave)
         }
 
+        object BigSmall : JsonTask<Partitioning>("partition.tile.json", type<Partitioning>(), ModelFile) {
+            override fun run() {
+                val model = ModelFile.readBio()
+                val (xL, xH) = model.variables[0].range
+                val (yL, yH) = model.variables[1].range
+                val stepSize = maxOf(xL - xL, yH - yL) / 40.0
+
+
+
+                val tX = buildSequence {
+                    var t = xL
+                    while (t < xH - 0.1) {
+                        yield(t)
+                        t += stepSize
+                    }
+                    yield(xH)
+                }
+
+                val tY = buildSequence {
+                    var t = yL
+                    while (t < yH - 0.1) {
+                        yield(t)
+                        t += stepSize
+                    }
+                    yield(yH)
+                }
+
+                fun thX(t: Double): Double = tX.map { it to Math.abs(t-it) }.minBy { it.second }!!.first
+                fun thY(t: Double): Double = tY.map { it to Math.abs(t-it) }.minBy { it.second }!!.first
+
+                val rectangles: List<Rectangle> = if (model.variables.size == 2) {
+                    buildSequence {
+                        var x = xL
+                        var shift = 0.0
+
+                        while (thX(x) < xH) {
+                            // 1 row of plain cubes
+                            var y = yL
+                            while (thY(y) < yH) {
+                                yield(Rectangle(doubleArrayOf(thX(x), thX(x + stepSize), thY(y), thY(y + stepSize))))
+                                y += stepSize
+                            }
+
+                            x += stepSize
+
+                            if (thX(x) < xH) {
+                                // 1 row of alternating cubes
+                                var y2 = yL + shift
+                                while (thY(y2) < yH) {
+                                    yield(Rectangle(doubleArrayOf(thX(x), thX(x + 2*stepSize), thY(y2), thY(y2 + 2*stepSize))))
+                                    y2 += 2 * stepSize
+                                    if (thY(y2) < yH) {
+                                        yield(Rectangle(doubleArrayOf(thX(x), thX(x + stepSize), thY(y2), thY(y2 + stepSize))))
+                                        yield(Rectangle(doubleArrayOf(thX(x + stepSize), thX(x + 2*stepSize), thY(y2), thY(y2 + stepSize))))
+                                        y2 += stepSize
+                                    }
+                                }
+                            }
+
+                            x += 2*stepSize
+
+                            shift = if (shift == 0.0) stepSize else 0.0
+                        }
+                    }.toList()
+                } else {
+                    model.variables[2].thresholds.dropLast(1).zip(model.variables[2].thresholds.drop(1)).flatMap { (zL, zH) ->
+                        buildSequence {
+                            var x = xL
+                            var shift = 0.0
+
+                            while (thX(x) < xH) {
+                                // 1 row of plain cubes
+                                var y = yL
+                                while (thY(y) < yH) {
+                                    yield(Rectangle(doubleArrayOf(thX(x), thX(x + stepSize), thY(y), thY(y + stepSize), zL, zH)))
+                                    y += stepSize
+                                }
+
+                                x += stepSize
+
+                                if (thX(x) < xH) {
+                                    // 1 row of alternating cubes
+                                    var y2 = yL + shift
+                                    while (thY(y2) < yH) {
+                                        yield(Rectangle(doubleArrayOf(thX(x), thX(x + 2 * stepSize), thY(y2), thY(y2 + 2 * stepSize), zL, zH)))
+                                        y2 += 2 * stepSize
+                                        if (thY(y2) < yH) {
+                                            yield(Rectangle(doubleArrayOf(thX(x), thX(x + stepSize), thY(y2), thY(y2 + stepSize), zL, zH)))
+                                            yield(Rectangle(doubleArrayOf(thX(x + stepSize), thX(x + 2 * stepSize), thY(y2), thY(y2 + stepSize), zL, zH)))
+                                            y2 += stepSize
+                                        }
+                                    }
+                                }
+
+                                x += 2 * stepSize
+
+                                shift = if (shift == 0.0) stepSize else 0.0
+                            }
+                        }.toList()
+                    }
+                }
+
+                writeJson(Partitioning(rectangles.map { Partitioning.Item(it) }))
+
+            }
+
+            object Svg : PartitionSvgTask("partition.tile.svg", BigSmall)
+        }
+
         object Diagonal : JsonTask<Partitioning>("partition.tile.json", type<Partitioning>(), ModelFile) {
             override fun run() {
                 val model = ModelFile.readBio()

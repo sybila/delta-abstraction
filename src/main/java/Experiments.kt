@@ -1,17 +1,16 @@
 
 import dreal.project.Delta
-import dreal.project.PWMA
 import dreal.project.TaskGraph
 import dreal.project.makeExperiments
 
 fun main(args: Array<String>) {
 
-    PWMA.Approximation
+    //PWMA.Approximation
     //PWMA.Partition
     //Delta.Tile.Herringbone
     //Delta.Tile.Herringbone.Svg
-    Delta.Tile.Diagonal
-    Delta.Tile.Diagonal.Svg
+    //Delta.Tile.Diagonal
+    //Delta.Tile.Diagonal.Svg
     /*//PWMA.Herringbone.Svg
     //PWMA.Transitions
     //PWMA.Transitions.Svg
@@ -34,7 +33,32 @@ fun main(args: Array<String>) {
 
     //Delta.Rectangular.BlenderExportTerminal*/
 
-    makeExperiments(Delta.Tile.Diagonal)
+    Delta.Tile.BigSmall.Svg
+    makeExperiments(Delta.Tile.BigSmall)
+/*
+    val Transitions = object : JsonTask<TransitionSystem<State>>("ts.transitions.delta.json", type<TransitionSystem<State>>()) {}
+    val TerminalComponents = object : JsonTask<List<State>>("prop.delta.json", type<List<State>>(), Transitions) {
+        override fun run() {
+            val ts = Transitions.readJson()
+            val partition = Delta.Tile.BigSmall.readJson()
+            val rect = partition.items[535].bounds
+            val initial = ts.states.filter { when (it) {
+                is State.Exterior -> false
+                is State.Interior -> it.rectangle == rect
+                is State.Transition -> it.from == rect || it.to == rect
+            } }.toSet()
+            var prop = initial
+            repeat(4) {
+                prop = ts.next(prop)
+            }
+            writeJson(prop.toList())
+        }
 
+        val Svg = DeltaTransitionSystemPropertySvgTask("prop.delta.svg",
+                Delta.Tile.BigSmall, Transitions, this
+        )
+    }
+
+    TerminalComponents.output.delete()*/
     TaskGraph.make()
 }

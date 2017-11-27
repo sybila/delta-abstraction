@@ -16,6 +16,11 @@ data class DeltaImage(
             val isColored = property.any { (it is State.Interior && it.rectangle == r) || (it is State.Transition && it.to == r) }
             r.toSvgRectangle().copy(style = Style.STROKE.fillColor(if (isColored) "#aaaaff" else "#ffffff"))
         }
+
+        val partitionLabels = rectangles.mapIndexed { i, r ->
+            Text(i.toString(), r.toSvgRectangle().center)
+        }
+
         val arrowSize = partitionRectangles.map { it.dimensions.x }.average() / 5.0
 
         val states: Map<State, Circle?> = system.states.map { s ->
@@ -33,7 +38,7 @@ data class DeltaImage(
                             r.innerPoint(d, if (positive) 0.33 else 0.66)
                         }
                         val radius = (if (dimension == 0) r.height else r.width) * 0.1
-                        Circle(center, radius, Style.STROKE.fillColor(if (s in property) "#aaaaff" else "#ffffff"))
+                        Circle(center, radius, Style.STROKE.fillColor("#ffffff"))
                     } catch (e: RuntimeException) { null /* Well, tough luck */ }
                 }
                 is State.Exterior -> null
@@ -55,7 +60,7 @@ data class DeltaImage(
             }
         }
 
-        return SvgImage(partitionRectangles + states.values.filterNotNull() + transitions, arrowSize)
+        return SvgImage(partitionRectangles + partitionLabels + states.values.filterNotNull() + transitions, arrowSize)
     }
 
 }
