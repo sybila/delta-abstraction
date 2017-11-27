@@ -406,7 +406,7 @@ object Delta {
                                 y += 2*stepSize
                                 if (thY(y) < yH && thX(x+stepSize) < xH) {
                                     yield(Rectangle(doubleArrayOf(
-                                            thX(x), thX(x + stepSize),
+                                            thX(x+stepSize), thX(x + 2*stepSize),
                                             thY(y), thY(y + stepSize),
                                             zL, zH
                                     )))
@@ -415,10 +415,10 @@ object Delta {
                             }
                             x += stepSize
                             shift = when (shift) {
-                                0.0 -> 2*stepSize
-                                2*stepSize -> -stepSize
-                                -stepSize -> stepSize
-                                stepSize -> -2*stepSize
+                                0.0 -> -2*stepSize
+                                -2*stepSize -> stepSize
+                                stepSize -> -stepSize
+                                -stepSize -> 2*stepSize
                                 else -> 0.0
                             }
                         }
