@@ -24,7 +24,7 @@ object Config {
      */
     val threadPool = newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), "worker")
 
-    val json = GsonBuilder().setPrettyPrinting()
+    val json = GsonBuilder()//.setPrettyPrinting()
             .registerTypeAdapter(State::class.java, StateSerializer)
             .serializeSpecialFloatingPointValues()
             .create()!!
