@@ -14,6 +14,7 @@ data class Rectangle(
 
     val dimensions = bounds.size / 2
 
+    @Transient  // just a public getter
     val intervals = bounds
 
     val facets: Sequence<Rectangle>
