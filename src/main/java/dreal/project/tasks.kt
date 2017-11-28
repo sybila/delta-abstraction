@@ -388,9 +388,46 @@ object Delta {
                 fun thX(t: Double): Double = tX.map { it to Math.abs(t-it) }.minBy { it.second }!!.first
                 fun thY(t: Double): Double = tY.map { it to Math.abs(t-it) }.minBy { it.second }!!.first
 
-                val rectangles: List<Rectangle> = model.variables[2].thresholds.dropLast(1).zip(model.variables[2].thresholds.drop(1)).flatMap { (zL, zH) ->
-                    buildSequence {
-                        var x = xL
+                val rectangles: List<Rectangle> = if (model.variables.size == 3) {
+                    model.variables[2].thresholds.dropLast(1).zip(model.variables[2].thresholds.drop(1)).flatMap { (zL, zH) ->
+                        buildSequence<Rectangle> {
+                            var x = xL - stepSize
+                            var shift = 0.0
+
+                            while (thX(x) < xH) {
+                                var y = yL + shift
+                                while (thY(y) < yH) {
+                                    if (thY(y) < yH) {
+                                        yield(Rectangle(doubleArrayOf(
+                                                thX(x), thX(x + 2*stepSize),
+                                                thY(y), thY(y + 2*stepSize),
+                                                zL, zH
+                                        )))
+                                    }
+                                    y += 2*stepSize
+                                    if (thY(y) < yH && thX(x+stepSize) < xH) {
+                                        yield(Rectangle(doubleArrayOf(
+                                                thX(x+stepSize), thX(x + 2*stepSize),
+                                                thY(y), thY(y + stepSize),
+                                                zL, zH
+                                        )))
+                                    }
+                                    y += 3*stepSize
+                                }
+                                x += stepSize
+                                shift = when (shift) {
+                                    0.0 -> -2*stepSize
+                                    -2*stepSize -> stepSize
+                                    stepSize -> -stepSize
+                                    -stepSize -> 2*stepSize
+                                    else -> 0.0
+                                }
+                            }
+                        }.toList().filter { r -> r.degenrateDimensions == 0 }
+                    }
+                } else {
+                    buildSequence<Rectangle> {
+                        var x = xL - stepSize
                         var shift = 0.0
 
                         while (thX(x) < xH) {
@@ -399,16 +436,14 @@ object Delta {
                                 if (thY(y) < yH) {
                                     yield(Rectangle(doubleArrayOf(
                                             thX(x), thX(x + 2*stepSize),
-                                            thY(y), thY(y + 2*stepSize),
-                                            zL, zH
+                                            thY(y), thY(y + 2*stepSize)
                                     )))
                                 }
                                 y += 2*stepSize
                                 if (thY(y) < yH && thX(x+stepSize) < xH) {
                                     yield(Rectangle(doubleArrayOf(
                                             thX(x+stepSize), thX(x + 2*stepSize),
-                                            thY(y), thY(y + stepSize),
-                                            zL, zH
+                                            thY(y), thY(y + stepSize)
                                     )))
                                 }
                                 y += 3*stepSize
@@ -422,7 +457,7 @@ object Delta {
                                 else -> 0.0
                             }
                         }
-                    }.toList()
+                    }.toList().filter { r -> r.degenrateDimensions == 0 }
                 }
 
                 writeJson(Partitioning(rectangles.map { Partitioning.Item(it) }))
