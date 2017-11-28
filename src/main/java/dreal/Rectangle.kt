@@ -12,11 +12,8 @@ data class Rectangle(
         private val bounds: DoubleArray
 ) {
 
-    @Transient
-    val dimensions = bounds.size / 2
-
-    @Transient  // just a public getter
-    val intervals = bounds
+    val dimensions
+            get() = bounds.size / 2
 
     val facets: Sequence<Rectangle>
         get() = (0 until dimensions)
