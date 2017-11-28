@@ -12,6 +12,7 @@ data class Rectangle(
         private val bounds: DoubleArray
 ) {
 
+    @Transient
     val dimensions = bounds.size / 2
 
     @Transient  // just a public getter
@@ -48,7 +49,7 @@ data class Rectangle(
         }
     }
 
-    fun contains(dim: Int, value: Double): Boolean = value >= bounds[2*dim] && value <= bounds[2*dim + 1]
+    fun contains(dim: Int, value: Double): Boolean = value >= bounds[2*dim] && value < bounds[2*dim + 1]
 
     fun project(dim: Int): Rectangle = Rectangle(DoubleArray(bounds.size - 2) { i ->
         val d = i / 2
