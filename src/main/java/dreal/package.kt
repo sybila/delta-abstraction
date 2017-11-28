@@ -14,7 +14,7 @@ fun provedUnsat(query: String, precision: Double = 0.001): Boolean {
     )
     val output = process.inputStream.bufferedReader().readLines()
     return when {
-        output.isEmpty() -> throw Timeout()  // returned when killed by timeout
+        output.isEmpty() -> throw Timeout().also { println(query) }  // returned when killed by timeout
         output.last() == "unsat" -> true
         "delta-sat" !in output.last() -> error("Solver failed: $output")
         else -> false
