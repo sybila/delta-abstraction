@@ -374,7 +374,7 @@ object Delta {
                         t += stepSize
                     }
                     yield(xH)
-                }
+                }.toList()
 
                 val tY = buildSequence {
                     var t = yL
@@ -383,19 +383,29 @@ object Delta {
                         t += stepSize
                     }
                     yield(yH)
-                }
+                }.toList()
 
                 fun thX(t: Double): Double = tX.map { it to Math.abs(t-it) }.minBy { it.second }!!.first
                 fun thY(t: Double): Double = tY.map { it to Math.abs(t-it) }.minBy { it.second }!!.first
 
                 val rectangles: List<Rectangle> = if (model.variables.size == 3) {
-                    model.variables[2].thresholds.dropLast(1).zip(model.variables[2].thresholds.drop(1)).flatMap { (zL, zH) ->
+                    val (zL, zH) = model.variables[2].range
+                    val tZ = buildSequence {
+                        var t = zL
+                        while (t < zH - stepSize) {
+                            yield(t)
+                            t += 2*stepSize // make z bit more coarse, since we don't have the two-one structure there
+                        }
+                        yield(zH)
+                    }.toList()
+                    var vShift = 0.0
+                    tZ.dropLast(1).zip(tZ.drop(1)).flatMap { (zL, zH) ->
                         buildSequence<Rectangle> {
-                            var x = xL - stepSize
+                            var x = xL - stepSize + vShift
                             var shift = 0.0
 
                             while (thX(x) < xH) {
-                                var y = yL + shift
+                                var y = yL + shift + vShift
                                 while (thY(y) < yH) {
                                     if (thY(y) < yH) {
                                         yield(Rectangle(doubleArrayOf(
@@ -423,6 +433,8 @@ object Delta {
                                     else -> 0.0
                                 }
                             }
+                            println(vShift)
+                            vShift = if (vShift == 0.0) -stepSize else 0.0
                         }.toList().filter { r -> r.degenrateDimensions == 0 }
                     }
                 } else {
