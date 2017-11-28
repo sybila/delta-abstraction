@@ -12,7 +12,7 @@ object Config {
     /**
      * The directory which contains the project files.
      */
-    val projectRoot = "pol/"
+    val projectRoot = "repressilator/"
 
     /**
      * Target SVG image size.
@@ -30,6 +30,9 @@ object Config {
             .create()!!
 
     val tMax: Double = 2.0
+
+    val skew: Double = 1.0
+    val granularity = 40.0
 
     val dReal = "/usr/local/bin/dreal"
     val coreutilsTimeout = "/usr/local/bin/gtimeout"
