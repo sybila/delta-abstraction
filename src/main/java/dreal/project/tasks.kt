@@ -365,7 +365,8 @@ object Delta {
                 val model = ModelFile.readBio()
                 val (xL, xH) = model.variables[0].range
                 val (yL, yH) = model.variables[1].range
-                val stepSize = maxOf(xL - xL, yH - yL) / 80.0
+                val stepSize = maxOf(xL - xL, yH - yL) / Config.granularity
+                val skew = Config.skew
 
                 val tX = buildSequence {
                     var t = xL
@@ -405,24 +406,24 @@ object Delta {
                             var shift = 0.0
 
                             while (thX(x) < xH) {
-                                var y = yL + shift + vShift
+                                var y = yL + skew*(shift + vShift)
                                 while (thY(y) < yH) {
                                     if (thY(y) < yH) {
                                         yield(Rectangle(doubleArrayOf(
                                                 thX(x), thX(x + 2*stepSize),
-                                                thY(y), thY(y + 2*stepSize),
+                                                thY(y), thY(y + skew*2*stepSize),
                                                 zL, zH
                                         )))
                                     }
-                                    y += 2*stepSize
+                                    y += skew*2*stepSize
                                     if (thY(y) < yH && thX(x+stepSize) < xH) {
                                         yield(Rectangle(doubleArrayOf(
                                                 thX(x+stepSize), thX(x + 2*stepSize),
-                                                thY(y), thY(y + stepSize),
+                                                thY(y), thY(y + skew*stepSize),
                                                 zL, zH
                                         )))
                                     }
-                                    y += 3*stepSize
+                                    y += skew*3*stepSize
                                 }
                                 x += stepSize
                                 shift = when (shift) {
@@ -442,22 +443,22 @@ object Delta {
                         var shift = 0.0
 
                         while (thX(x) < xH) {
-                            var y = yL + 2*shift
+                            var y = yL + skew*shift
                             while (thY(y) < yH) {
                                 if (thY(y) < yH) {
                                     yield(Rectangle(doubleArrayOf(
                                             thX(x), thX(x + 2*stepSize),
-                                            thY(y), thY(y + 2*2*stepSize)
+                                            thY(y), thY(y + skew*2*stepSize)
                                     )))
                                 }
-                                y += 2*2*stepSize
+                                y += skew*2*stepSize
                                 if (thY(y) < yH && thX(x+stepSize) < xH) {
                                     yield(Rectangle(doubleArrayOf(
                                             thX(x+stepSize), thX(x + 2*stepSize),
-                                            thY(y), thY(y + 2*stepSize)
+                                            thY(y), thY(y + skew*stepSize)
                                     )))
                                 }
-                                y += 2*3*stepSize
+                                y += skew*3*stepSize
                             }
                             x += stepSize
                             shift = when (shift) {
