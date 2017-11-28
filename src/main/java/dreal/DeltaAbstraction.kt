@@ -328,7 +328,10 @@ private suspend inline fun <T: Any> List<T>.filterParallel(crossinline action: (
 
 private inline fun provedUnsatWithin(tMax: Double = Config.tMax, queryBuilder: (Double) -> String): Boolean {
     return try {
-        provedUnsat(makeQuery(queryBuilder(tMax)))
+        val small = tMax / 10.0
+        return if (provedUnsat(makeQuery(queryBuilder(small)))) true else {
+            provedUnsat(makeQuery(queryBuilder(tMax)))
+        }
         /*val timeStep = tMax / 10.0
         val times = (0..10).map { it * timeStep }
         times.any { t -> provedUnsat(makeQuery(queryBuilder(t))) }*/
