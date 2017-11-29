@@ -1,0 +1,9 @@
+VARS: x,y
+
+EQ: x = 1 + x*x*y - 3*x - x
+EQ: y = 3*x - x*x*y
+
+VAR_POINTS: x: 1500, 40; y: 1500, 40
+
+THRES: x: 0, 6
+THRES: y: 0, 6
