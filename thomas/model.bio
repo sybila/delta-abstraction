@@ -1,8 +1,8 @@
 VARS: x,y,z
 
-EQ: x = sin(z) - 0.3x
-EQ: y = sin(y) - 0.3y
-EQ: z = sin(x) - 0.3z
+EQ: x = sin(z) - 0.3*x
+EQ: y = sin(y) - 0.3*y
+EQ: z = sin(x) - 0.3*z
 
 VAR_POINTS: x: 1500, 40; y: 1500, 40; z: 1500, 40
 
