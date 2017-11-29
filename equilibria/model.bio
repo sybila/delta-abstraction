@@ -1,0 +1,11 @@
+VARS: x,y,z
+
+EQ: x = y
+EQ: y = -x^3 - zy
+EQ: z = y^2 - 0.6
+
+VAR_POINTS: x: 1500, 20; y: 1500, 20; z: 1500, 20
+
+THRES: x: -3.0, 3.0
+THRES: y: -3.0, 3.0
+THRES: z: -3.0, 3.0
