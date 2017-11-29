@@ -1,7 +1,7 @@
 VARS: x,y
 
-EQ: x = 1 + x*x*y - 3*x - x
-EQ: y = 3*x - x*x*y
+EQ: x = 1 + x*x*y - 1.7*x - x
+EQ: y = 1.7*x - x*x*y
 
 VAR_POINTS: x: 1500, 40; y: 1500, 40
 

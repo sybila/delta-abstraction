@@ -39,6 +39,7 @@ fun OdeModel.toModelFactory() = object : ModelFactory {
 
 fun Evaluable.toSMT(names: List<String>): String = when (this) {
     is Pow -> "(pow ${names[this.varIndex]} ${this.degree})"
+    is Sine -> "(sin ${names[this.varIndex]})"
     is RampApproximation -> {
         when {
             this == RampApproximation(0, doubleArrayOf(-5.0, -1.0, 5.0), doubleArrayOf(4.0, 0.0, 6.0)) -> "(abs (+ x 1))"
