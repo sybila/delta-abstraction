@@ -16,7 +16,10 @@ fun provedUnsat(query: String, precision: Double = 0.001): Boolean {
     return when {
         output.isEmpty() -> throw Timeout().also { println(query) }  // returned when killed by timeout
         output.last() == "unsat" -> true
-        "delta-sat" !in output.last() -> error("Solver failed: $output")
+        "delta-sat" !in output.last() -> {
+            println(query)
+            error("Solver failed: $output")
+        }
         else -> false
     }
 }

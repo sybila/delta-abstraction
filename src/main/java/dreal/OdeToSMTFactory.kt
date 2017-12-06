@@ -49,6 +49,8 @@ fun Evaluable.toSMT(names: List<String>): String = when (this) {
     }
     is Hill -> {
         when {
+            a == 1.0 && b == 0.0 && n == 1.0 -> "(/ ($theta) (+ $theta ${names[varIndex]}))"
+            a == 0.0 && b == 1.0 && n == 1.0 -> "(/ ${names[varIndex]} (+ ${names[varIndex]} $theta))"
             a == 1.0 && b == 0.0 -> "(/ (${Math.pow(theta, n)}) (+ ${Math.pow(theta, n)} (* ${(0 until n.toInt()).joinToString(separator = " ") { names[varIndex] }})))"
             a == 0.0 && b == 1.0 -> "(/ (* ${(0 until n.toInt()).joinToString(separator = " ") { names[varIndex] }}) (+ ${(0 until n.toInt()).joinToString(separator = " ") { names[varIndex] }} ${Math.pow(theta, n)}))"
             else -> "(+ $a (/ (- $b $a) (+ 1 (pow (/ $theta ${names[varIndex]}) $n))))" //a + (b - a) * (1 / (1 + Math.pow(theta/value, n)))
