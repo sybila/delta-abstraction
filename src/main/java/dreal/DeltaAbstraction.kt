@@ -110,6 +110,8 @@ suspend fun ModelFactory.checkStates(system: TransitionSystem<State>): Transitio
     }
     val admissibleSet = admissibleStates.toSet()
 
+    println("Done computing")
+
     val inducedTransitions = system.edges.mapNotNull { (from, to) ->
         val start = originalStates[from]
         val end = originalStates[to]
@@ -119,6 +121,8 @@ suspend fun ModelFactory.checkStates(system: TransitionSystem<State>): Transitio
             newFrom to newTo
         }
     }
+
+    println("Done making transitions")
 
     return TransitionSystem(admissibleStates, inducedTransitions)
 }
@@ -309,7 +313,7 @@ internal inline fun List<String>.makeLines(action: (Int, String) -> String): Str
 
 internal fun Rectangle.interval(dim: Int): String = "[${bound(dim, false)}, ${bound(dim, true)}]"
 
-private suspend inline fun <T: Any> List<T>.filterParallel(crossinline action: (T) -> Boolean): List<T> {
+suspend inline fun <T: Any> List<T>.filterParallel(crossinline action: (T) -> Boolean): List<T> {
     val lastPrint = AtomicLong(0L)
     val progress = AtomicInteger(0)
     return this.map { async(Config.threadPool) {
@@ -328,7 +332,7 @@ private suspend inline fun <T: Any> List<T>.filterParallel(crossinline action: (
 
 private inline fun provedUnsatWithin(tMax: Double = Config.tMax, queryBuilder: (Double) -> String): Boolean {
     return try {
-        val small = tMax / 10.0
+        val small = tMax / 5.0
         return if (provedUnsat(makeQuery(queryBuilder(small)))) true else {
             provedUnsat(makeQuery(queryBuilder(tMax)))
         }
