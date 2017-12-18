@@ -109,17 +109,25 @@ suspend fun ModelFactory.checkStates(system: TransitionSystem<State>): Transitio
         }
     }
     val admissibleSet = admissibleStates.toSet()
+    val indexMap = admissibleStates.mapIndexed { index, state -> state to index }.toMap()
 
     println("Done computing")
 
-    val inducedTransitions = system.edges.mapNotNull { (from, to) ->
+    val filtered = system.edges.filterParallel { (from, to) ->
         val start = originalStates[from]
         val end = originalStates[to]
-        if (start !in admissibleSet || end !in admissibleSet) null else {
-            val newFrom = admissibleStates.indexOf(start)
-            val newTo = admissibleStates.indexOf(end)
-            newFrom to newTo
-        }
+        start in admissibleSet && end in admissibleSet
+    }
+
+    println("Filtered")
+
+    val inducedTransitions = filtered.mapIndexed { i, (from, to) ->
+        if (i % 1000 == 0) println("Progress $i")
+        val start = originalStates[from]
+        val end = originalStates[to]
+        val newFrom = indexMap[start]!!
+        val newTo = indexMap[end]!!
+        newFrom to newTo
     }
 
     println("Done making transitions")
