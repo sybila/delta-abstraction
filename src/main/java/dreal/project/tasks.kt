@@ -6,6 +6,7 @@ import com.github.sybila.ode.model.computeApproximation
 import dreal.*
 import kotlinx.coroutines.experimental.runBlocking
 import svg.PwmaImage
+import java.util.*
 import kotlin.coroutines.experimental.buildSequence
 
 object ModelFile : BioTask("model.bio")
@@ -67,6 +68,37 @@ object PWMA {
                 val model = Approximation.readBio()
                 val ts = RectangleOdeModel(model, createSelfLoops = true)
                 val prop = TerminalComponents.readJson()
+                writeImage(PwmaImage(model, ts, mapOf("#ffaaaa" to prop.toSet())))
+            }
+        }
+
+    }
+
+    object Prop : JsonTask<List<Int>>("prop.pwma.json", type<List<Int>>(), Transitions) {
+        override fun run() {
+            val ts = Transitions.readJson()
+            val model = PWMA.Approximation.readBio()
+            val tX = model.variables[0].thresholds
+            val tY = model.variables[1].thresholds
+            val encoder = NodeEncoder(model)
+            val eqUp = ts.states.find { s ->
+                val (x,y) = encoder.decodeNode(s)
+                tX[x] < 6.1 && tX[x+1] > 6.1 && tY[y] < 4.45 && tY[y+1] > 4.45
+            }!!
+            val eqDown = ts.states.find { s ->
+                val (x,y) = encoder.decodeNode(s)
+                tX[x] < 5 && tX[x+1] > 5 && tY[y] < 0.8 && tY[y+1] > 0.8
+            }!!
+            val reachUp = ts.reachSet(setOf(eqUp), time = false)
+            val reachDown = ts.reachSet(setOf(eqDown), time = false)
+            writeJson(reachDown.intersect(reachUp).toList())
+        }
+
+        object Svg : SvgTask("prop.pwma.svg", Prop, Approximation) {
+            override fun run() {
+                val model = Approximation.readBio()
+                val ts = RectangleOdeModel(model, createSelfLoops = true)
+                val prop = Prop.readJson()
                 writeImage(PwmaImage(model, ts, mapOf("#ffaaaa" to prop.toSet())))
             }
         }
@@ -207,6 +239,114 @@ fun makeExperiments(partitioning: JsonTask<Partitioning>) = object {
             output.writeText(script)
         }
     }*/
+
+}
+
+object SpiralPartition {
+
+    object p2D : JsonTask<Partitioning>("partition.spiral.json", type<Partitioning>(), ModelFile) {
+
+        object Svg : PartitionSvgTask("partition.spiral.svg", this)
+
+        private val expand = Stack<Pair<Rectangle, Boolean>>()
+
+        override fun run() {
+            val model = ModelFile.readBio()
+            val builder = PartitionBuilder(model, Config.granularity)
+            val stepSize = builder.stepSize
+            val r = Rectangle(doubleArrayOf(0.0, 2*stepSize, 0.0, 2*stepSize))
+            builder.addRectangle(r)?.let { expand.push(it to true) }
+            do {
+                val (rect, big) = expand.pop()
+                if (big) builder.expandBig(rect)
+                else builder.expandSmall(rect)
+            } while (expand.isNotEmpty())
+            writeJson(builder.build())
+        }
+
+        private fun PartitionBuilder.expandBig(r: Rectangle) {
+            val step = stepSize
+            val x = r.bound(0, false) + ((r.bound(0, true) - r.bound(0, false)) / 2)
+            val y = r.bound(1, false) + ((r.bound(1, true) - r.bound(1, false)) / 2)
+            expandPoint(x, y) { nX, nY ->
+                val add = Rectangle(doubleArrayOf(nX - 0.5 * step, nX + 0.5 * step, nY - 0.5 * step, nY + 0.5 * step))
+                addRectangle(add)?.let { expand.push(add to false) }
+            }
+        }
+
+        private fun PartitionBuilder.expandSmall(r: Rectangle) {
+            val step = stepSize
+            val x = r.bound(0, false) + ((r.bound(0, true) - r.bound(0, false)) / 2)
+            val y = r.bound(1, false) + ((r.bound(1, true) - r.bound(1, false)) / 2)
+            expandPoint(x, y) { nX, nY ->
+                val add = Rectangle(doubleArrayOf(nX - step, nX + step, nY - step, nY + step))
+                addRectangle(add)?.let { expand.push(add to true) }   // we add the original on purpose - it might have been severely cut off
+            }
+        }
+
+        private inline fun PartitionBuilder.expandPoint(x: Double, y: Double, action: (Double, Double) -> Unit) {
+            val step = stepSize
+            action(x + 1.5 * step, y + 0.5 * step)
+            action(x - 1.5 * step, y - 0.5 * step)
+            action(x - 0.5 * step, y + 1.5 * step)
+            action(x + 0.5 * step, y - 1.5 * step)
+        }
+    }
+
+    object p3D : JsonTask<Partitioning>("partition.spiral.json", type<Partitioning>(), ModelFile) {
+
+        object Svg : PartitionSvgTask("partition.spiral.svg", this)
+
+        private val expand = Stack<Pair<Rectangle, Boolean>>()
+
+        override fun run() {
+            val model = ModelFile.readBio()
+            val builder = PartitionBuilder(model, Config.granularity)
+            val stepSize = builder.stepSize
+            val r = Rectangle(doubleArrayOf(0.0, 2*stepSize, 0.0, 2*stepSize, 0.0, 2*stepSize))
+            builder.addRectangle(r)?.let { expand.push(it to true) }
+            do {
+                val (rect, big) = expand.pop()
+                if (big) builder.expandBig(rect)
+                else builder.expandSmall(rect)
+            } while (expand.isNotEmpty())
+            writeJson(builder.build())
+        }
+
+        private fun PartitionBuilder.expandBig(r: Rectangle) {
+            val halfStep = 0.5 * stepSize
+            val x = r.dimCenter(0)
+            val y = r.dimCenter(1)
+            val z = r.dimCenter(2)
+            expandPoint(x, y, z) { nX, nY, nZ ->
+                val add = Rectangle(doubleArrayOf(nX - halfStep, nX + halfStep, nY - halfStep, nY + halfStep, nZ - halfStep, nZ + halfStep))
+                addRectangle(add)?.let { expand.push(add to false) }
+            }
+        }
+
+        private fun PartitionBuilder.expandSmall(r: Rectangle) {
+            val step = stepSize
+            val x = r.dimCenter(0)
+            val y = r.dimCenter(1)
+            val z = r.dimCenter(2)
+            expandPoint(x, y, z) { nX, nY, nZ ->
+                val add = Rectangle(doubleArrayOf(nX - step, nX + step, nY - step, nY + step, nZ - step, nZ + step))
+                addRectangle(add)?.let { expand.push(add to true) }   // we add the original on purpose - it might have been severely cut off
+            }
+        }
+
+        private fun Rectangle.dimCenter(dim: Int): Double = bound(dim, false) + (bound(dim, true) - bound(dim, false)) / 2
+
+        private inline fun PartitionBuilder.expandPoint(x: Double, y: Double, z: Double, action: (Double, Double, Double) -> Unit) {
+            val step = stepSize
+            action(x + 1.5 * step, y + 0.5 * step, z + 0.5 * step)
+            action(x - 1.5 * step, y - 0.5 * step, z - 0.5 * step)
+            action(x - 0.5 * step, y + 1.5 * step, z + 0.5 * step)
+            action(x + 0.5 * step, y - 1.5 * step, z - 0.5 * step)
+            action(x - 0.5 * step, y - 0.5 * step, z + 1.5 * step)
+            action(x + 0.5 * step, y + 0.5 * step, z - 1.5 * step)
+        }
+    }
 
 }
 

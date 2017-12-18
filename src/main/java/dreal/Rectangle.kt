@@ -71,6 +71,15 @@ data class Rectangle(
         return low to high
     }
 
+    fun intersect(other: Rectangle): Rectangle? {
+        val newBounds = DoubleArray(bounds.size) {
+            if (it % 2 == 0) Math.max(bounds[it], other.bounds[it])
+            else Math.min(bounds[it], other.bounds[it])
+        }
+        val isValid = newBounds.indices.filter { it % 2 == 0 }.any { bounds[it] > bounds[it+1] }
+        return if (isValid) null else Rectangle(newBounds)
+    }
+
     fun weave(): List<Rectangle> {
         if (bounds.size != 4) error("Currently, we weave only on 2D rectangles :P")
         val sizeX = bounds[1] - bounds[0]
