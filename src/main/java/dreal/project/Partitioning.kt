@@ -102,7 +102,7 @@ class PartitionBuilder(
 
     fun build(): Partitioning {
         // check for rectangle intersections
-        val hasIntersection = rectangles.flatMap { rectangles.map {
+        val hasIntersection = rectangles.asSequence().flatMap { rectangles.asSequence().map {
             if (it != it) it to it else null
         } }.filterNotNull().find { (a, b) -> a.intersect(b) != null }
         if (hasIntersection != null) error("Invalid partitioning on $hasIntersection")
