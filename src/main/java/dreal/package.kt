@@ -23,6 +23,8 @@ fun provedUnsat(query: String, precision: Double = 0.001): Boolean {
             error("Solver failed: $output")
         }
         else -> false
+    }.also {
+        tempFile.delete()   // JVM is not clearing temp files automatically.
     }
 }
 
