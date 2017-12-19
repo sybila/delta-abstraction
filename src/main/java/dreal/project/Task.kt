@@ -1,12 +1,16 @@
 package dreal.project
 
+import com.github.sybila.ode.generator.NodeEncoder
+import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.OdeModel
 import com.github.sybila.ode.model.Parser
 import com.github.sybila.ode.model.toBio
 import com.google.gson.reflect.TypeToken
+import dreal.Rectangle
 import dreal.State
 import svg.DeltaImage
 import svg.Image
+import svg.PwmaImage
 import svg.SvgImage
 import java.io.File
 import java.lang.reflect.Type
@@ -83,7 +87,7 @@ abstract class PartitionSvgTask(outputName: String, private val task: JsonTask<P
         } else if (dimen == 3) {
             val thresholds = partition.items.asSequence().flatMap {
                 sequenceOf(it.bounds.bound(2, false), it.bounds.bound(2, true))
-            }.toSet()
+            }.toSet().sorted()
             thresholds.forEachIndexed { i, t ->
                 val newPartition = partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { it.project(2) }
                 Config  .projectFile("${output.name}_${i}_$t.svg")
@@ -112,7 +116,7 @@ class DeltaTransitionSystemSvgTask(outputName: String,
         } else if (dimen == 3) {
             val thresholds = partition.items.asSequence().flatMap {
                 sequenceOf(it.bounds.bound(2, false), it.bounds.bound(2, true))
-            }.toSet()
+            }.toSet().sorted()
             thresholds.forEachIndexed { i, t ->
                 val newPartition = Partitioning(partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { Partitioning.Item(it.project(2)) })
                 val newStates = transitions.states.map {
@@ -153,7 +157,58 @@ class DeltaTransitionSystemPropertySvgTask(outputName: String,
         } else if (dimen == 3) {
             val thresholds = partition.items.asSequence().flatMap {
                 sequenceOf(it.bounds.bound(2, false), it.bounds.bound(2, true))
-            }.toSet()
+            }.toSet().sorted()
+            thresholds.forEachIndexed { i, t ->
+                val newPartition = Partitioning(partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { Partitioning.Item(it.project(2)) })
+                val newStates = transitions.states.map {
+                    if (!it.contains(2, t)) null else it.project(2)
+                }
+                val newProp = prop.filter { it.contains(2, t) }.map { it.project(2) }
+                val newStateList = newStates.filterNotNull()
+                val newEdges = transitions.edges.mapNotNull { (s,t) ->
+                    val start = newStates[s]
+                    val target = newStates[t]
+                    if (start == null || target == null) null else {
+                        newStateList.indexOf(start) to newStateList.indexOf(target)
+                    }
+                }
+                Config  .projectFile("${output.name}_${i}_$t.svg")
+                        .writeText(
+                                DeltaImage(newPartition, TransitionSystem(newStateList, newEdges), newProp.toSet())
+                                        .toSvgImage().normalize(Config.targetWidth).compileSvg()
+                        )
+            }
+        }
+    }
+
+}
+
+open class RectangularTransitionSystemPropertySvgTask(outputName: String,
+                                           private val approximation: BioTask,
+                                           private val partition: JsonTask<Partitioning>,
+                                           private val property: JsonTask<List<Int>>)
+    : SvgTask(outputName, partition, property, approximation) {
+
+    override fun run() {
+        val model = approximation.readBio()
+        val ts = RectangleOdeModel(model, createSelfLoops = true)
+        val partition = partition.readJson()
+        val rProp = property.readJson()
+        val encoder = NodeEncoder(model)
+        val prop = rProp.map { State.Interior(Rectangle(encoder.decodeNode(it).mapIndexed { i, t ->
+            val th = model.variables[i].thresholds
+            th[t] to th[t + 1]
+        }.flatMap { listOf(it.first, it.second) }.toDoubleArray())) }
+        val dimen = partition.items.first().bounds.dimensions
+        val transitions = TransitionSystem<State>(partition.items.map { State.Interior(it.bounds) }, emptyList())
+
+        if (prop.any { it !in transitions.states }) error("Problem ${prop.find { it !in transitions.states }}")
+        if (dimen == 2) {
+            writeImage(PwmaImage(model, ts, mapOf("#aaffaa" to rProp.toSet())))
+        } else if (dimen == 3) {
+            val thresholds = partition.items.asSequence().flatMap {
+                sequenceOf(it.bounds.bound(2, false), it.bounds.bound(2, true))
+            }.toSet().sorted()
             thresholds.forEachIndexed { i, t ->
                 val newPartition = Partitioning(partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { Partitioning.Item(it.project(2)) })
                 val newStates = transitions.states.map {
