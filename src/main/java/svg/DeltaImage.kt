@@ -30,17 +30,17 @@ data class DeltaImage(
                     Circle(rectangle.center, Math.min(rectangle.width, rectangle.height) * 0.125, Style.FILL)
                 }
                 is State.Transition -> {
-                    /*try {
-                        val (rectangle, dimension, positive) = s.from.getFacetIntersection(s.to)!!
+                    try {
+                        val (_, dimension, positive) = s.from.getFacetIntersection(s.to)!!
+                        val rectangle = s.via
                         val d = if (dimension == 0) Dimension.Y else Dimension.X    // sliding dimension is the opposite of contact dimension
                         val r = rectangle.toSvgRectangle()
-                        val center = if (State.Transition(s.to, s.from) !in system.states) r.center else {
+                        val center = if (State.Transition(s.to, s.from, s.via) !in system.states) r.center else {
                             r.innerPoint(d, if (positive) 0.33 else 0.66)
                         }
                         val radius = (if (dimension == 0) r.height else r.width) * 0.1
                         Circle(center, radius, Style.STROKE.fillColor("#ffffff"))
-                    } catch (e: RuntimeException) { null /* Well, tough luck */ }*/
-                    null
+                    } catch (e: RuntimeException) { null /* Well, tough luck */ }
                 }
                 is State.Exterior -> null
             }

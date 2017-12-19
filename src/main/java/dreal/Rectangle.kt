@@ -16,6 +16,13 @@ class Rectangle(
     val array
         get() = bounds
 
+    val facets: Sequence<Rectangle>
+        get() = (0 until dimensions)
+                .asSequence()
+                .flatMap {
+                    sequenceOf(getFacet(it, true), getFacet(it, false))
+                }
+
     init {
         if (dimensions > 10) error("More than 10 dimensions are currently not supported!")
         if (bounds.size % 2 == 1) error("Bounds array in $this has an odd length.")
@@ -64,6 +71,50 @@ class Rectangle(
         val dimensions = Point(bounds[1] - bounds[0], bounds[3] - bounds[2])
         return svg.Rectangle(center, dimensions, Style.STROKE)
     }
+
+    // return null if intersection has less than n-1 dimensions
+    fun getFacetIntersection(other: Rectangle): FacetIntersection? {
+        if (this.bounds.size != other.bounds.size) error("Rectangles not compatible")
+        val intersection = DoubleArray(bounds.size) { i ->
+            if (i % 2 == 0) {
+                maxOf(this.bounds[i], other.bounds[i])
+            } else {
+                minOf(this.bounds[i], other.bounds[i])
+            }
+        }
+        if (intersection.findInterval { a, b -> a > b } != null) return null    // empty intersection
+        val degeneracy = intersection.mapIntervals { a, b -> if (a == b) 1 else 0 }
+        val degenerateDimensions = degeneracy.sum()
+        return when {
+            degenerateDimensions == 0 -> error("Rectangles $this and $other have non-degenerate intersection!")
+            degenerateDimensions > 1 -> {
+                null
+            }
+            else -> {
+                val dimension = degeneracy.indexOfFirst { it == 1 }
+                val positive = this.bounds[2*dimension+1] == other.bounds[2*dimension]
+                FacetIntersection(Rectangle(intersection), dimension, positive)
+            }
+        }
+    }
+
+    fun getFacet(dimension: Int, positive: Boolean): Rectangle
+            = Rectangle(DoubleArray(bounds.size) { i ->
+        val d = i / 2
+        if (d != dimension) bounds[i]
+        else {
+            val bound = if (positive) 1 else 0
+            bounds[2 * d + bound]
+        }
+    })
+
+    /**
+     * Contains - intersection rectangle, dimension on which the facets intersect, true if the target rectangle
+     * is higher than the argument rectangle in that dimension (positive trajectory flow)
+     */
+    data class FacetIntersection(
+            val rectangle: Rectangle, val dimension: Int, val positive: Boolean
+    )
 
     /** Equality is based on the bounds array **/
 

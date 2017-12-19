@@ -55,3 +55,18 @@ ${names.makeLines { i, name -> "(declare-fun ${name}_0_t () Real ${r.interval(i)
 
     return provedUnsat(makeQuery(query))
 }
+
+fun ModelFactory.maybeHasFlow(r: Rectangle, d: Int, positive: Boolean): Boolean {
+
+    val query =
+"""
+; Declare model variables
+${names.makeLines { i, name -> "(declare-fun $name () Real ${r.interval(i)})" }}
+
+; Declare equation is positive/negative
+(assert (${if (positive) "<" else ">" } 0 ${makeModelEquation(d)}))
+"""
+
+    return !provedUnsat(makeQuery(query))
+
+}

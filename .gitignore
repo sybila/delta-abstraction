@@ -32,3 +32,7 @@ pol/*.json
 
 *.svg
 *.json
+
+*.data
+
+out
