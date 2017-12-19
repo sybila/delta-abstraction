@@ -122,7 +122,6 @@ suspend fun ModelFactory.checkStates(system: TransitionSystem<State>): Transitio
     println("Filtered")
 
     val inducedTransitions = filtered.mapIndexed { i, (from, to) ->
-        if (i % 1000 == 0) println("Progress $i/${filtered.size}")
         val start = originalStates[from]
         val end = originalStates[to]
         val newFrom = indexMap[start]!!
