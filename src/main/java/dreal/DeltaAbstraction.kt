@@ -1,13 +1,6 @@
 package dreal
 
-import dreal.project.Config
-import dreal.project.Partitioning
-import dreal.project.TransitionSystem
-import kotlinx.coroutines.experimental.async
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
-import kotlin.coroutines.experimental.buildSequence
-
+/*
 suspend fun ModelFactory.makeStateSpace(partitioning: Partitioning): DeltaModel {
 
     val rectangles = partitioning.items.map { it.bounds }
@@ -316,10 +309,6 @@ suspend fun ModelFactory.checkTransitions(system: TransitionSystem<State>): Tran
     return TransitionSystem(system.states, admissibleTransitions)
 }
 
-internal inline fun List<String>.makeLines(action: (Int, String) -> String): String = this.mapIndexed(action).joinToString(separator = "\n")
-
-internal fun Rectangle.interval(dim: Int): String = "[${bound(dim, false)}, ${bound(dim, true)}]"
-
 suspend inline fun <T: Any> List<T>.filterParallel(crossinline action: (T) -> Boolean): List<T> {
     val lastPrint = AtomicLong(0L)
     val progress = AtomicInteger(0)
@@ -608,4 +597,5 @@ ${names.makeLines { i, name ->
             system = reachableTransitions
     )
 }
+*/
 */

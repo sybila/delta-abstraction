@@ -3,13 +3,98 @@ package dreal
 import svg.Point
 import svg.Style
 import java.util.*
-import kotlin.coroutines.experimental.SequenceBuilder
-import kotlin.coroutines.experimental.buildSequence
 
-data class Rectangle(
+class Rectangle(
+        private val bounds: DoubleArray
+) {
+
+    val dimensions = bounds.size / 2
+    val degenerateDimensions: Int = bounds.mapIntervals { a, b -> if (a == b) 1 else 0 }.sum()
+
+    val volume = bounds.mapIntervals { a, b -> b - a }.fold(1.0) { a, b -> a * b }
+
+    val array
+        get() = bounds
+
+    init {
+        if (dimensions > 10) error("More than 10 dimensions are currently not supported!")
+        if (bounds.size % 2 == 1) error("Bounds array in $this has an odd length.")
+        bounds.findInterval { a, b -> a > b }?.let { error("Empty bound $it in $this") }
+    }
+
+    fun lBound(dim: Int) = bounds[2 * dim]
+    fun hBound(dim: Int) = bounds[2 * dim + 1]
+
+    /**
+     * Split this rectangle in every dimension, producing 2^|non-deg. dim| smaller rectangles.
+     */
+    fun split(): Set<Rectangle> {
+        // A list of 2^dimensions binary numbers which correspond to all possible combinations of splits.
+        // So for N=2, we get {00, 01, 10, 11}
+        val splitPoints = bounds.mapIntervals { a, b -> a + (b-a)/2 }
+        return (0 until 1.shl(dimensions)).map { mask ->
+            Rectangle(DoubleArray(2*dimensions) { i ->
+                val d = i / 2
+                if (mask.shr(d) % 2 == 0) {
+                    // we want the lower interval in dimension d
+                    if (i % 2 == 0) bounds[i] else splitPoints[d]
+                } else {
+                    // we want the upper interval in dimension d
+                    if (i % 2 == 0) splitPoints[d] else bounds[i]
+                }
+            })
+        }.toSet()   // If we have degenerate dimensions, some rectangles will be equivalent.
+    }
+
+    /**
+     * Remove [dim] dimension, projecting this rectangle.
+     */
+    fun project(dim: Int): Rectangle = Rectangle(DoubleArray(bounds.size - 2) { i ->
+        val d = i / 2
+        if (d < dim) bounds[i]
+        else bounds[i+2]
+    })
+
+    /**
+     * If [dimensions] == 2, generate an equivalent svg rectangle.
+     */
+    fun toSvgRectangle(): svg.Rectangle {
+        if (bounds.size != 4) error("Only 2D rectangles can be drawn in SVG.")
+        val center = Point((bounds[0] + bounds[1]) / 2, (bounds[2] + bounds[3]) / 2)
+        val dimensions = Point(bounds[1] - bounds[0], bounds[3] - bounds[2])
+        return svg.Rectangle(center, dimensions, Style.STROKE)
+    }
+
+    /** Equality is based on the bounds array **/
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Rectangle
+
+        if (!Arrays.equals(bounds, other.bounds)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return Arrays.hashCode(bounds)
+    }
+
+    override fun toString(): String {
+        return bounds.mapIntervals { a, b -> if (a == b) a.toString() else "[$a, $b]" }
+                .joinToString(prefix = "R[", postfix = "]")
+    }
+
+
+}
+/*
+
+data class RectangleOld(
         // vector of pairs: [[x_l, x_h], [y_l, y_h], [z_l, z_h], ...]
         // note that some intervals may be singular (one point), but no can be empty
-        private val bounds: DoubleArray
+        internal val bounds: DoubleArray
 ) {
 
     val dimensions
@@ -168,4 +253,5 @@ data class Rectangle(
         return bounds.mapIntervals { a, b -> if (a == b) a.toString() else "[$a, $b]" }
                 .joinToString(prefix = "R[", postfix = "]")
     }
-}
+
+}*/

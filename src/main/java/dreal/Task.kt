@@ -1,4 +1,4 @@
-package dreal.project
+package dreal
 
 import com.github.sybila.ode.generator.NodeEncoder
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
@@ -6,20 +6,18 @@ import com.github.sybila.ode.model.OdeModel
 import com.github.sybila.ode.model.Parser
 import com.github.sybila.ode.model.toBio
 import com.google.gson.reflect.TypeToken
-import dreal.Rectangle
-import dreal.State
 import svg.DeltaImage
 import svg.Image
 import svg.PwmaImage
 import svg.SvgImage
 import java.io.File
 import java.lang.reflect.Type
-
+/*
 abstract class Task(outputName: String, val dependencies: List<Task>) {
 
     init {
         @Suppress("LeakingThis")
-        TaskGraph.register(this)
+        (TaskGraph.register(this))
     }
 
     val output: File = Config.projectFile(outputName)
@@ -90,7 +88,7 @@ abstract class PartitionSvgTask(outputName: String, private val task: JsonTask<P
             }.toSet().sorted()
             thresholds.forEachIndexed { i, t ->
                 val newPartition = partition.items.map { it.bounds }.filter { it.contains(2, t) }.map { it.project(2) }
-                Config  .projectFile("${output.name}_${i}_$t.svg")
+                Config.projectFile("${output.name}_${i}_$t.svg")
                         .writeText(
                                 SvgImage(newPartition.map { it.toSvgRectangle() }/* + listOf(bounds)*/, 0.0)
                                     .normalize(Config.targetWidth)
@@ -103,8 +101,8 @@ abstract class PartitionSvgTask(outputName: String, private val task: JsonTask<P
 }
 
 class DeltaTransitionSystemSvgTask(outputName: String,
-                                            private val partition: JsonTask<Partitioning>,
-                                            private val states: JsonTask<TransitionSystem<State>>)
+                                   private val partition: JsonTask<Partitioning>,
+                                   private val states: JsonTask<TransitionSystem<State>>)
     : SvgTask(outputName, partition, states) {
 
     override fun run() {
@@ -130,7 +128,7 @@ class DeltaTransitionSystemSvgTask(outputName: String,
                         newStateList.indexOf(start) to newStateList.indexOf(target)
                     }
                 }
-                Config  .projectFile("${output.name}_${i}_$t.svg")
+                Config.projectFile("${output.name}_${i}_$t.svg")
                         .writeText(
                                 DeltaImage(newPartition, TransitionSystem(newStateList, newEdges), emptySet())
                                         .toSvgImage().normalize(Config.targetWidth).compileSvg()
@@ -142,9 +140,9 @@ class DeltaTransitionSystemSvgTask(outputName: String,
 }
 
 class DeltaTransitionSystemPropertySvgTask(outputName: String,
-                                            private val partition: JsonTask<Partitioning>,
-                                            private val states: JsonTask<TransitionSystem<State>>,
-                                            private val property: JsonTask<List<State>>)
+                                           private val partition: JsonTask<Partitioning>,
+                                           private val states: JsonTask<TransitionSystem<State>>,
+                                           private val property: JsonTask<List<State>>)
     : SvgTask(outputName, partition, states, property) {
 
     override fun run() {
@@ -172,7 +170,7 @@ class DeltaTransitionSystemPropertySvgTask(outputName: String,
                         newStateList.indexOf(start) to newStateList.indexOf(target)
                     }
                 }
-                Config  .projectFile("${output.name}_${i}_$t.svg")
+                Config.projectFile("${output.name}_${i}_$t.svg")
                         .writeText(
                                 DeltaImage(newPartition, TransitionSystem(newStateList, newEdges), newProp.toSet())
                                         .toSvgImage().normalize(Config.targetWidth).compileSvg()
@@ -184,9 +182,9 @@ class DeltaTransitionSystemPropertySvgTask(outputName: String,
 }
 
 open class RectangularTransitionSystemPropertySvgTask(outputName: String,
-                                           private val approximation: BioTask,
-                                           private val partition: JsonTask<Partitioning>,
-                                           private val property: JsonTask<List<Int>>)
+                                                      private val approximation: BioTask,
+                                                      private val partition: JsonTask<Partitioning>,
+                                                      private val property: JsonTask<List<Int>>)
     : SvgTask(outputName, partition, property, approximation) {
 
     override fun run() {
@@ -223,7 +221,7 @@ open class RectangularTransitionSystemPropertySvgTask(outputName: String,
                         newStateList.indexOf(start) to newStateList.indexOf(target)
                     }
                 }
-                Config  .projectFile("${output.name}_${i}_$t.svg")
+                Config.projectFile("${output.name}_${i}_$t.svg")
                         .writeText(
                                 DeltaImage(newPartition, TransitionSystem(newStateList, newEdges), newProp.toSet())
                                         .toSvgImage().normalize(Config.targetWidth).compileSvg()
@@ -232,4 +230,4 @@ open class RectangularTransitionSystemPropertySvgTask(outputName: String,
         }
     }
 
-}
+}*/

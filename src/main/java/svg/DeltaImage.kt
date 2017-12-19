@@ -1,8 +1,8 @@
 package svg
 
+import dreal.Partitioning
 import dreal.State
-import dreal.project.Partitioning
-import dreal.project.TransitionSystem
+import dreal.TransitionSystem
 
 data class DeltaImage(
         private val partitioning: Partitioning,
@@ -17,9 +17,9 @@ data class DeltaImage(
             r.toSvgRectangle().copy(style = Style.STROKE.fillColor(if (isColored) "#aaaaff" else "#ffffff"))
         }
 
-        val partitionLabels = rectangles.mapIndexed { i, r ->
+        val partitionLabels = emptyList<SvgPrimitive<*>>()/*rectangles.mapIndexed { i, r ->
             Text(i.toString(), r.toSvgRectangle().center)
-        }
+        }*/
 
         val arrowSize = partitionRectangles.map { it.dimensions.x }.average() / 5.0
 
@@ -30,7 +30,7 @@ data class DeltaImage(
                     Circle(rectangle.center, Math.min(rectangle.width, rectangle.height) * 0.125, Style.FILL)
                 }
                 is State.Transition -> {
-                    try {
+                    /*try {
                         val (rectangle, dimension, positive) = s.from.getFacetIntersection(s.to)!!
                         val d = if (dimension == 0) Dimension.Y else Dimension.X    // sliding dimension is the opposite of contact dimension
                         val r = rectangle.toSvgRectangle()
@@ -39,7 +39,8 @@ data class DeltaImage(
                         }
                         val radius = (if (dimension == 0) r.height else r.width) * 0.1
                         Circle(center, radius, Style.STROKE.fillColor("#ffffff"))
-                    } catch (e: RuntimeException) { null /* Well, tough luck */ }
+                    } catch (e: RuntimeException) { null /* Well, tough luck */ }*/
+                    null
                 }
                 is State.Exterior -> null
             }
@@ -47,7 +48,7 @@ data class DeltaImage(
 
         // WARNING: We are not drawing the exterior state, so some transitions will not be drawn!
 
-        val transitions = system.edges.mapNotNull { (source, destination) ->
+       /* val transitions = system.edges.mapNotNull { (source, destination) ->
             if (source == destination) null else {
                 val from = states[system.states[source]]
                 val to = states[system.states[destination]]
@@ -58,9 +59,9 @@ data class DeltaImage(
                     Line(a, b, Style.ARROW.strokeWidth(0.5))
                 }
             }
-        }
+        }*/
 
-        return SvgImage(partitionRectangles + partitionLabels + states.values.filterNotNull() + transitions, arrowSize)
+        return SvgImage(partitionRectangles + partitionLabels + states.values.filterNotNull() /*+ transitions*/, arrowSize)
     }
 
 }

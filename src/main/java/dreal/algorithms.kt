@@ -1,4 +1,4 @@
-package dreal.project
+package dreal
 
 fun <T: Any> TransitionSystem<T>.invert(): TransitionSystem<T> = this.copy(edges = edges.map { it.second to it.first })
 
@@ -43,6 +43,22 @@ fun <T: Any> TransitionSystem<T>.reachSet(from: Set<T>, time: Boolean = true): S
     return ts.reachSet(from)
 }
 
+fun <T: Any> TransitionSystem<T>.reachAllSet(from: Set<T>, time: Boolean = true): Set<T> {
+    val futureTS = this.edges.groupBy({ states[it.first] }, { states[it.second] })
+    val pastTS = this.edges.groupBy({ states[it.second] }, { states[it.first] })
+    val (front, back) = if (time) (futureTS to pastTS) else (pastTS to futureTS)
+
+    var iteration = from
+    do {
+        val old = iteration
+        val check = iteration.asSequence().flatMap { front[it]?.asSequence() ?: emptySequence() }.toSet()
+        val update = check.asSequence().filter { back[it]?.all { it in iteration } ?: true }.toSet()
+        iteration += update
+    } while (iteration != old)
+
+    return iteration
+}
+
 fun <T: Any> TransitionSystem<T>.next(from: Set<T>, time: Boolean = true): Set<T> {
     val ts = if (time) {
         this.edges.groupBy({ states[it.first] }, { states[it.second] })
@@ -52,6 +68,18 @@ fun <T: Any> TransitionSystem<T>.next(from: Set<T>, time: Boolean = true): Set<T
 
     return from.asSequence().flatMap { ts[it]?.asSequence() ?: emptySequence() }.toSet()
 }
+/*
+fun <T: Any> TransitionSystem<T>.nextNoZ(from: Set<T>, time: Boolean = true): Set<T> {
+    val ts = if (time) {
+        this.edges.groupBy({ states[it.first] }, { states[it.second] })
+    } else {
+        this.edges.groupBy({ states[it.second] }, { states[it.first] })
+    }
+
+    return from.asSequence().flatMap { ts[it]?.asSequence() ?: emptySequence() }.filter {
+        if (it !is State.Transition) true else it.from.getFacetIntersection(it.to)!!.dimension != 2
+    }.toSet()
+}*/
 
 fun <T: Any> Map<T, List<T>>.reachSet(data: Set<T>, bound: Set<T>? = null): Set<T> {
     var iteration = data

@@ -16,7 +16,7 @@ sealed class State {
     data class Interior(val rectangle: Rectangle) : State() {
 
         override fun contains(dim: Int, value: Double): Boolean
-            = rectangle.contains(dim, value)
+            = error("")// rectangle.contains(dim, value)
 
         override fun project(dim: Int): State
             = Interior(rectangle.project(dim))
@@ -25,13 +25,13 @@ sealed class State {
     /**
      * Abstract state representing trajectories flowing [from] one given rectangle [to] the other one.
      */
-    data class Transition(val from: Rectangle, val to: Rectangle) : State() {
+    data class Transition(val from: Rectangle, val to: Rectangle, val via: Rectangle) : State() {
 
         override fun contains(dim: Int, value: Double): Boolean
-                = from.getFacetIntersection(to)!!.rectangle.contains(dim, value)
+                = error("") //via.contains(dim, value)
 
         override fun project(dim: Int): State
-                = Transition(from.project(dim), to.project(dim))
+                = Transition(from.project(dim), to.project(dim), via.project(dim))
     }
 
 

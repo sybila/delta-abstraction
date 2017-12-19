@@ -25,6 +25,10 @@ data class SvgImage(
         dimensions = up + (down * -1.0)
     }
 
+    operator fun plus(other: SvgImage): SvgImage {
+        return SvgImage(primitives + other.primitives, Math.min(arrowSize, other.arrowSize))
+    }
+
     /**
      * Scale and offset this SVG image to target width, preserving the aspect ratio and making everything visible.
      */

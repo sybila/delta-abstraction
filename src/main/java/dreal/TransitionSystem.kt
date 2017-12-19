@@ -1,4 +1,4 @@
-package dreal.project
+package dreal
 
 import com.github.sybila.ode.generator.rect.RectangleOdeModel
 import com.github.sybila.ode.model.OdeModel

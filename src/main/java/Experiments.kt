@@ -1,64 +1,55 @@
 
-import dreal.project.Delta
-import dreal.project.TaskGraph
-import dreal.project.makeExperiments
+import com.github.sybila.ode.model.Parser
+import dreal.*
+import kotlinx.coroutines.experimental.runBlocking
+import svg.toSvgImage
+import java.io.DataOutputStream
+import java.io.File
+
+suspend fun computePartitioning(granularity: Int) {
+    val odeModel = Parser().parse(File(Config.projectRoot, "model.bio"))
+    val model = odeModel.toModelFactory()
+
+    //val boundsRect = Rectangle(odeModel.variables.flatMap { listOf(it.range.first, it.range.second) }.toDoubleArray())
+    var partitioning = odeModel.granularPartitioning(granularity)// Partitioning(setOf(Partitioning.Item(boundsRect)))
+
+    var i = 0
+    do {
+        val old = partitioning
+        partitioning = model.refineUnsafe(partitioning)
+
+        i += 1
+        val image = partitioning.toSvgImage(partitioning.items.mapNotNull { if (it.isSafe) null else it.bounds }.toSet())
+
+        val output = File(Config.projectRoot, "partitioning.$i.svg")
+        output.writeText(image.normalize(Config.targetWidth).compileSvg())
+    } while (old != partitioning)
+
+    val output = File(Config.projectRoot, "partitioning.$granularity.data")
+    DataOutputStream(output.outputStream()).use {
+        it.writePartitioning(partitioning)
+    }
+}
 
 fun main(args: Array<String>) {
+    runBlocking {
+        val odeModel = Parser().parse(File(Config.projectRoot, "model.bio"))
+        val model = odeModel.toModelFactory()
 
-    //PWMA.Approximation
-    //PWMA.Partition
-    //Delta.Tile.Herringbone
-    //Delta.Tile.Herringbone.Svg
-    //Delta.Tile.Diagonal
-    //Delta.Tile.Diagonal.Svg
-    /*//PWMA.Herringbone.Svg
-    //PWMA.Transitions
-    //PWMA.Transitions.Svg
-    //PWMA.TerminalComponents
-    //PWMA.TerminalComponents.Svg
-    Delta.Rectangular.All
-    Delta.Rectangular.All.Svg
-    Delta.Rectangular.States
-    //Delta.Rectangular.States.Svg
-    Delta.Rectangular.Transitions
-    //Delta.Rectangular.Transitions.Svg
-    Delta.Rectangular.TerminalComponents
-    Delta.Rectangular.TerminalComponents.Svg
-    Delta.Rectangular.InitialComponents
-    //Delta.Rectangular.InitialComponents.Svg
-    //Delta.Rectangular.Cycles
-    //Delta.Rectangular.Cycles.Svg
+        //val boundsRect = Rectangle(odeModel.variables.flatMap { listOf(it.range.first, it.range.second) }.toDoubleArray())
+        var partitioning = odeModel.granularPartitioning(20)// Partitioning(setOf(Partitioning.Item(boundsRect)))
 
-    //Delta.Rectangular.Transitions.output.delete()
+        var i = 0
+        do {
+            val old = partitioning
+            println("Refine partitioning: ${old.items.size}")
+            partitioning = model.refineUnsafe(partitioning)
 
-    //Delta.Rectangular.BlenderExportTerminal*/
+            i += 1
+            val image = partitioning.toSvgImage(partitioning.items.mapNotNull { if (it.isSafe) null else it.bounds }.toSet())
 
-    Delta.Tile.BigSmall.Svg
-    makeExperiments(Delta.Tile.BigSmall)
-/*
-    val Transitions = object : JsonTask<TransitionSystem<State>>("ts.transitions.delta.json", type<TransitionSystem<State>>()) {}
-    val TerminalComponents = object : JsonTask<List<State>>("prop.delta.json", type<List<State>>(), Transitions) {
-        override fun run() {
-            val ts = Transitions.readJson()
-            val partition = Delta.Tile.BigSmall.readJson()
-            val rect = partition.items[535].bounds
-            val initial = ts.states.filter { when (it) {
-                is State.Exterior -> false
-                is State.Interior -> it.rectangle == rect
-                is State.Transition -> it.from == rect || it.to == rect
-            } }.toSet()
-            var prop = initial
-            repeat(4) {
-                prop = ts.next(prop)
-            }
-            writeJson(prop.toList())
-        }
-
-        val Svg = DeltaTransitionSystemPropertySvgTask("prop.delta.svg",
-                Delta.Tile.BigSmall, Transitions, this
-        )
+            val output = File(Config.projectRoot, "partitioning.$i.svg")
+            output.writeText(image.normalize(Config.targetWidth).compileSvg())
+        } while (old != partitioning)
     }
-
-    TerminalComponents.output.delete()*/
-    TaskGraph.make()
 }
