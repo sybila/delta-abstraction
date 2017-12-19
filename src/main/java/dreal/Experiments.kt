@@ -1,6 +1,5 @@
-
+package dreal
 import com.github.sybila.ode.model.Parser
-import dreal.*
 import kotlinx.coroutines.experimental.runBlocking
 import svg.toSvgImage
 import java.io.DataOutputStream
@@ -33,23 +32,6 @@ suspend fun computePartitioning(granularity: Int) {
 
 fun main(args: Array<String>) {
     runBlocking {
-        val odeModel = Parser().parse(File(Config.projectRoot, "model.bio"))
-        val model = odeModel.toModelFactory()
-
-        //val boundsRect = Rectangle(odeModel.variables.flatMap { listOf(it.range.first, it.range.second) }.toDoubleArray())
-        var partitioning = odeModel.granularPartitioning(20)// Partitioning(setOf(Partitioning.Item(boundsRect)))
-
-        var i = 0
-        do {
-            val old = partitioning
-            println("Refine partitioning: ${old.items.size}")
-            partitioning = model.refineUnsafe(partitioning)
-
-            i += 1
-            val image = partitioning.toSvgImage(partitioning.items.mapNotNull { if (it.isSafe) null else it.bounds }.toSet())
-
-            val output = File(Config.projectRoot, "partitioning.$i.svg")
-            output.writeText(image.normalize(Config.targetWidth).compileSvg())
-        } while (old != partitioning)
+        computePartitioning(50)
     }
 }
