@@ -43,3 +43,41 @@ suspend fun ModelFactory.buildStateSpace(partitioning: Partitioning, faceSplit: 
     println("Total states: ${facetStates.size}")
     return states
 }
+
+suspend fun ModelFactory.buildTransitions(partitioning: Partitioning, states: List<State>): List<Pair<Int, Int>> {
+
+    val timeMap = partitioning.items.map { (r, t) -> r to t }.toMap()
+    val indexMap = states.mapIndexed { i, state -> state to i }.toMap()
+
+    return states.mapParallel { source ->
+        source to when (source) {
+            is State.Interior -> states.filter { target ->
+                target == source || (target is State.Transition && source.rectangle == target.from)
+            }
+            is State.Exterior -> states.filter { target ->
+                target == source || (target is State.Transition && target.from.degenerateDimensions > 0)
+            }
+            is State.Transition -> states.filter { target ->
+                when (target) {
+                    is State.Interior -> source.to == target.rectangle
+                    is State.Exterior -> source.to.degenerateDimensions > 0
+                    is State.Transition -> source.to.degenerateDimensions == 0 && source.to == target.from
+                }
+            }
+        }
+    }.flatMap { (source, successors) ->
+        successors.map { source to it }
+    }.filterParallel { (source, target) ->
+        if (source !is State.Transition || target !is State.Transition) true else {
+            val bounds = source.to
+            val safetyBound = timeMap[bounds]!!
+            if (safetyBound < 0.0) true else {
+                val init = source.from.getFacetIntersection(source.to)!!.copy(rectangle = source.via)
+                val final = target.from.getFacetIntersection(target.to)!!.copy(rectangle = target.via)
+
+                maybeCanReach(bounds, init, final, safetyBound)
+            }
+        }
+    }.map { (s, t) -> indexMap[s]!! to indexMap[t]!! }
+
+}

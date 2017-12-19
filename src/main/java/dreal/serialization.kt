@@ -75,3 +75,17 @@ fun DataInputStream.readStates(): List<State> {
         readState(rectangles)
     }.toList()
 }
+
+fun DataOutputStream.writeTransitions(transitions: List<Pair<Int, Int>>) {
+    writeInt(transitions.size)
+    transitions.forEach { (a, b) ->
+        writeInt(a)
+        writeInt(b)
+    }
+}
+
+fun DataInputStream.readTransitions(): List<Pair<Int, Int>> {
+    return Array(readInt()) {
+        readInt() to readInt()
+    }.toList()
+}

@@ -50,11 +50,72 @@ suspend fun computeStates(faceSplit: Int, granularity: Int) {
     }
 }
 
+suspend fun computeTransitions(faceSplit: Int, granularity: Int) {
+    val odeModel = Parser().parse(File(Config.projectRoot, "model.bio"))
+    val model = odeModel.toModelFactory()
+
+    val partitioningFile = File(Config.projectRoot, "partitioning.$granularity.data")
+    val partitioning = DataInputStream(partitioningFile.inputStream()).use { it.readPartitioning() }
+
+    val stateFile = File(Config.projectRoot, "states.$granularity.$faceSplit.data")
+    val states = DataInputStream(stateFile.inputStream()).use { it.readStates() }
+
+    val transitions = model.buildTransitions(partitioning, states)
+
+    /*val imgOutput = File(Config.projectRoot, "transitions.svg")
+    val image = DeltaImage(partitioning, TransitionSystem(states, transitions), emptySet())
+    imgOutput.writeText(image.toSvgImage().normalize(Config.targetWidth).compileSvg())*/
+
+    val output = File(Config.projectRoot, "transitions.$granularity.$faceSplit.data")
+    DataOutputStream(output.outputStream()).use {
+        it.writeTransitions(transitions)
+    }
+}
+
+fun computeTerminalComponents(faceSplit: Int, granularity: Int) {
+    val odeModel = Parser().parse(File(Config.projectRoot, "model.bio"))
+    val model = odeModel.toModelFactory()
+
+    val partitioningFile = File(Config.projectRoot, "partitioning.$granularity.data")
+    val partitioning = DataInputStream(partitioningFile.inputStream()).use { it.readPartitioning() }
+
+    val stateFile = File(Config.projectRoot, "states.$granularity.$faceSplit.data")
+    val states = DataInputStream(stateFile.inputStream()).use { it.readStates() }
+
+    val transitionFile = File(Config.projectRoot, "transitions.$granularity.$faceSplit.data")
+    val transitions = DataInputStream(transitionFile.inputStream()).use { it.readTransitions() }
+
+    val TS = TransitionSystem(states, transitions)
+
+    val terminalComponents = TS.terminalComponents()
+
+    val terminalRectangles = terminalComponents.mapNotNull {
+        when (it) {
+            is State.Exterior -> null
+            is State.Interior -> it.rectangle
+            is State.Transition -> it.to
+        }
+    }
+
+    val image = partitioning.toSvgImage(terminalRectangles.toSet())
+
+    val output = File(Config.projectRoot, "terminal.svg")
+    output.writeText(image.normalize(Config.targetWidth).compileSvg())
+}
+
 fun main(args: Array<String>) {
     runBlocking {
         //computePartitioning(10)
-        computeStates(0, 50)
+        //computeStates(1, 10)
+        //computeTransitions(1, 10)
+        /*computeStates(0, 50)
         computeStates(1, 50)
-        computeStates(2, 50)
+        computeStates(2, 50)*/
+        computeTransitions(0, 50)
+        computeTransitions(1, 50)
+        computeTransitions(2, 50)
+        computeTerminalComponents(0, 50)
+        computeTerminalComponents(1, 50)
+        computeTerminalComponents(2, 50)
     }
 }

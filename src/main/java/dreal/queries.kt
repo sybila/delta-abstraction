@@ -70,3 +70,48 @@ ${names.makeLines { i, name -> "(declare-fun $name () Real ${r.interval(i)})" }}
     return !provedUnsat(makeQuery(query))
 
 }
+
+fun ModelFactory.maybeCanReach(bounds: Rectangle, from: Rectangle.FacetIntersection, to: Rectangle.FacetIntersection, t: Double): Boolean {
+
+    val (sR, sDim, sPositive) = from
+    val (tR, tDim, tPositive) = to
+
+    val query =
+"""
+; Declare model variables, initial curve points and final curve points.
+${names.makeLines { i, name -> "(declare-fun $name () Real ${bounds.interval(i)})" }}
+${names.makeLines { i, name -> "(declare-fun ${name}_0_0 () Real ${bounds.interval(i)})" }}
+${names.makeLines { i, name -> "(declare-fun ${name}_0_t () Real ${bounds.interval(i)})" }}
+
+; Declare time variable.
+(declare-fun time () Real [0.0, $t])
+
+; Declare flow equations.
+(define-ode flow_1 (
+    ${names.makeLines { i, name -> "(= d/dt[$name] ${makeModelEquation(i)})" }}
+))
+
+; Declare curve of length <= $t
+(assert (= [${names.joinToString(separator = " ") { it + "_0_t" }}]
+    (integral 0. time [${names.joinToString(separator = " ") { it + "_0_0" }}] flow_1)
+))
+
+; Start facet
+(assert (and ${names.makeLines { i, name ->
+    "(<= ${name}_0_0 ${sR.hBound(i)}) (>= ${name}_0_0 ${sR.lBound(i)})"
+}}))
+(assert (${if (sPositive) "<" else ">" } 0 ${makeModelEquation(sDim, names = names.map { it + "_0_0" })}))
+
+; End facet
+(assert (and ${names.makeLines { i, name ->
+    "(<= ${name}_0_t ${tR.hBound(i)}) (>= ${name}_0_t ${tR.lBound(i)})"
+}}))
+(assert (${if (tPositive) "<" else ">" } 0 ${makeModelEquation(tDim, names = names.map { it + "_0_t" })}))
+
+(assert (forall_t 1 [0 time] (and ${names.makeLines { i, name ->
+    "(<= ${name}_0_t ${bounds.hBound(i)}) (>= ${name}_0_t ${bounds.lBound(i)})"
+}})))
+"""
+
+    return !provedUnsat(makeQuery(query))
+}
