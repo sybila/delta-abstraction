@@ -108,6 +108,8 @@ class Rectangle(
         }
     })
 
+    fun contains(dim: Int, value: Double): Boolean = value >= bounds[2*dim] && value < bounds[2*dim + 1]
+
     /**
      * Contains - intersection rectangle, dimension on which the facets intersect, true if the target rectangle
      * is higher than the argument rectangle in that dimension (positive trajectory flow)

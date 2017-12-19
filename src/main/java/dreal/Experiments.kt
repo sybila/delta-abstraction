@@ -13,16 +13,16 @@ suspend fun computePartitioning(granularity: Int) {
     //val boundsRect = Rectangle(odeModel.variables.flatMap { listOf(it.range.first, it.range.second) }.toDoubleArray())
     var partitioning = odeModel.granularPartitioning(granularity)// Partitioning(setOf(Partitioning.Item(boundsRect)))
 
-    var i = 0
+    //var i = 0
     do {
         val old = partitioning
         partitioning = model.refineUnsafe(partitioning)
 
-        i += 1
+        /*i += 1
         val image = partitioning.toSvgImage(partitioning.items.mapNotNull { if (it.isSafe) null else it.bounds }.toSet())
 
         val output = File(Config.projectRoot, "partitioning.$i.svg")
-        output.writeText(image.normalize(Config.targetWidth).compileSvg())
+        output.writeText(image.normalize(Config.targetWidth).compileSvg())*/
     } while (old != partitioning)
 
     val output = File(Config.projectRoot, "partitioning.$granularity.data")
@@ -94,10 +94,28 @@ fun computeTerminalComponents(faceSplit: Int, granularity: Int) {
         }
     }
 
-    val image = partitioning.toSvgImage(terminalRectangles.toSet())
+    if (partitioning.items.first().bounds.dimensions == 2) {
+        val image = partitioning.toSvgImage(terminalRectangles.toSet())
 
-    val output = File(Config.projectRoot, "terminal.$granularity.$faceSplit.svg")
-    output.writeText(image.normalize(Config.targetWidth).compileSvg())
+        val output = File(Config.projectRoot, "terminal.$granularity.$faceSplit.svg")
+        output.writeText(image.normalize(Config.targetWidth).compileSvg())
+    } else {
+        val zThresholds = partitioning.items.asSequence().flatMap {
+            sequenceOf(it.bounds.lBound(2), it.bounds.hBound(2))
+        }.toSet().sorted()
+        zThresholds.forEachIndexed { i, z ->
+            val output = File(Config.projectRoot, "$i.$z.terminal.$granularity.$faceSplit.svg")
+
+            val newPartition = Partitioning(partitioning.items.filter { it.bounds.contains(2, z) }.map { it.copy(bounds =
+                it.bounds.project(2)
+            ) }.toSet())
+
+            val newProp = terminalRectangles.filter { it.contains(2, z) }.map { it.project(2) }
+
+            val image = newPartition.toSvgImage(newProp.toSet())
+            output.writeText(image.normalize(Config.targetWidth).compileSvg())
+        }
+    }
 }
 
 fun main(args: Array<String>) {
@@ -105,14 +123,15 @@ fun main(args: Array<String>) {
         //computePartitioning(10)
         //computeStates(1, 10)
         //computeTransitions(1, 10)
-        computeStates(0, 50)
-        computeTransitions(0, 50)
-        computeTerminalComponents(0, 50)
-        computeStates(1, 50)
+        computePartitioning(10)
+        computeStates(0, 10)
+        computeTransitions(0, 10)
+        computeTerminalComponents(0, 10)
+        /*computeStates(1, 50)
         computeTransitions(1, 50)
         computeTerminalComponents(1, 50)
         computeStates(2, 50)
         computeTransitions(2, 50)
-        computeTerminalComponents(2, 50)
+        computeTerminalComponents(2, 50)*/
     }
 }
