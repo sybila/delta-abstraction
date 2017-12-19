@@ -73,9 +73,6 @@ suspend fun computeTransitions(faceSplit: Int, granularity: Int) {
 }
 
 fun computeTerminalComponents(faceSplit: Int, granularity: Int) {
-    val odeModel = Parser().parse(File(Config.projectRoot, "model.bio"))
-    val model = odeModel.toModelFactory()
-
     val partitioningFile = File(Config.projectRoot, "partitioning.$granularity.data")
     val partitioning = DataInputStream(partitioningFile.inputStream()).use { it.readPartitioning() }
 
@@ -99,7 +96,7 @@ fun computeTerminalComponents(faceSplit: Int, granularity: Int) {
 
     val image = partitioning.toSvgImage(terminalRectangles.toSet())
 
-    val output = File(Config.projectRoot, "terminal.svg")
+    val output = File(Config.projectRoot, "terminal.$granularity.$faceSplit.svg")
     output.writeText(image.normalize(Config.targetWidth).compileSvg())
 }
 
@@ -108,14 +105,14 @@ fun main(args: Array<String>) {
         //computePartitioning(10)
         //computeStates(1, 10)
         //computeTransitions(1, 10)
-        /*computeStates(0, 50)
-        computeStates(1, 50)
-        computeStates(2, 50)*/
+        computeStates(0, 50)
         computeTransitions(0, 50)
-        computeTransitions(1, 50)
-        computeTransitions(2, 50)
         computeTerminalComponents(0, 50)
+        computeStates(1, 50)
+        computeTransitions(1, 50)
         computeTerminalComponents(1, 50)
+        computeStates(2, 50)
+        computeTransitions(2, 50)
         computeTerminalComponents(2, 50)
     }
 }
