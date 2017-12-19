@@ -6,8 +6,8 @@ EQ: x = k1*hillm(y,5,5,1,0) - deg_x*x
 EQ: y = k2*hillm(z,5,5,1,0) - deg_y*y
 EQ: z = k3*hillm(x,5,5,1,0) - deg_z*z
 
-VAR_POINTS: x: 1500, 10; y: 1500, 10; z: 1500, 10
+VAR_POINTS: x: 1500, 20; y: 1500, 20; z: 1500, 20
 
-THRES: x: 0, 10
-THRES: y: 0, 10
-THRES: z: 0, 10
+THRES: x: 0, 11
+THRES: y: 0, 11
+THRES: z: 0, 11
