@@ -20,7 +20,11 @@ fun G1Sexperiments(faceSplit: Int, granularity: Int) {
     val stableLow = TS.states.filter { it is State.Interior && it.rectangle.contains(0, 5.03) && it.rectangle.contains(1, 0.8) }
     val stableHigh = TS.states.filter { it is State.Interior && it.rectangle.contains(0, 6.15) && it.rectangle.contains(1, 4.51) }
 
-    val prop = TS.reachSet(stableHigh.toSet(), time = false)
+    val propL = TS.reachSet(stableLow.toSet(), time = false)
+
+    val propH = TS.reachSet(stableHigh.toSet(), time = false)
+
+    val prop = propL.intersect(propH)
 
     val propRect = prop.mapNotNull {
         when (it) {
@@ -30,6 +34,10 @@ fun G1Sexperiments(faceSplit: Int, granularity: Int) {
         }
     }.toSet()
 
+    val volume = propRect.map { it.volume }.sum()
+
+    println("Vol: $volume")
+
     val image = partitioning.toSvgImage(propRect)
 
     val output = File(Config.projectRoot, "prop.$granularity.$faceSplit.svg")
@@ -38,8 +46,8 @@ fun G1Sexperiments(faceSplit: Int, granularity: Int) {
 
 fun main(args: Array<String>) {
     runBlocking {
-        G1Sexperiments(0, 50)
-        G1Sexperiments(1, 50)
+        //G1Sexperiments(0, 50)
+        //G1Sexperiments(1, 50)
         G1Sexperiments(2, 50)
     }
 }

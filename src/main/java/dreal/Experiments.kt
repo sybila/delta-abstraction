@@ -86,13 +86,17 @@ fun computeTerminalComponents(faceSplit: Int, granularity: Int) {
 
     val terminalComponents = TS.terminalComponents()
 
-    val terminalRectangles = terminalComponents.mapNotNull {
+    println("Computed")
+
+    val terminalRectangles: Set<Rectangle> = terminalComponents.mapNotNullTo(HashSet()) {
         when (it) {
             is State.Exterior -> null
             is State.Interior -> it.rectangle
             is State.Transition -> it.to
         }
-    }
+    }.toSet()
+
+    println("Volume: ${terminalRectangles.map { it.volume }.sum()}")
 
     if (partitioning.items.first().bounds.dimensions == 2) {
         val image = partitioning.toSvgImage(terminalRectangles.toSet())
@@ -115,6 +119,51 @@ fun computeTerminalComponents(faceSplit: Int, granularity: Int) {
             val image = newPartition.toSvgImage(newProp.toSet())
             output.writeText(image.normalize(Config.targetWidth).compileSvg())
         }
+
+        val output = File(Config.projectRoot, "terminal.$granularity.$faceSplit.py")
+
+        val commands = terminalRectangles.mapIndexed { i, r ->
+            val location = DoubleArray(3) { i ->
+                (r.lBound(i) + r.hBound(i)) / 2
+            }.joinToString(separator = ",")
+            val proportions = DoubleArray(3) { i ->
+                val size = r.hBound(i) - r.lBound(i)
+                size/2  // default cube has size 2
+            }.joinToString(separator = ",")
+            //println("Rectangle $r at $location with resize $proportions")
+"""
+bpy.ops.mesh.primitive_cube_add(location=($location))
+bpy.ops.transform.resize(value=($proportions))
+bpy.context.active_object.data.materials.append(solid)
+print('$i/${terminalRectangles.size}')
+"""
+
+        }
+
+        val script =
+"""
+import bpy
+
+solid = bpy.data.materials.get("solid")
+if solid is None:
+        solid = bpy.data.materials.new(name = "solid")
+        solid.diffuse_color = (0.8, 0.8, 1.0)
+        solid.specular_intensity = 0.0
+        solid.emit = 0.5
+
+wire = bpy.data.materials.get("wire")
+if wire is None:
+        wire = bpy.data.materials.new(name = "wire")
+        wire.type = 'WIRE'
+        wire.diffuse_color = (0.0, 0.0, 0.0)
+        wire.specular_intensity = 0.0
+        wire.offset_z = 0.01
+        wire.use_transparency = True
+        wire.emit = 0.5
+
+${commands.joinToString(separator = "\n")}
+"""
+        output.writeText(script)
     }
 }
 
@@ -123,10 +172,10 @@ fun main(args: Array<String>) {
         //computePartitioning(10)
         //computeStates(1, 10)
         //computeTransitions(1, 10)
-        computePartitioning(10)
-        computeStates(0, 10)
-        computeTransitions(0, 10)
-        computeTerminalComponents(0, 10)
+        //computePartitioning(10)
+        //computeStates(0, 10)
+        //computeTransitions(0, 10)
+        computeTerminalComponents(2, 50)
         /*computeStates(1, 50)
         computeTransitions(1, 50)
         computeTerminalComponents(1, 50)
