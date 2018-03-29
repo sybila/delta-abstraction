@@ -63,7 +63,7 @@ suspend fun ModelFactory.refineUnsafe(partitioning: Partitioning): Partitioning 
 
     val refined = toRefine.flatMap { (r, _) -> r.split() }.mapParallel { r ->
         when {
-            maybeHasZero(r) -> Partitioning.Item(r).also { println("unsafe - zero") }  // if it has zero, we will never prove safety
+            //maybeHasZero(r) -> Partitioning.Item(r).also { println("unsafe - zero") }  // if it has zero, we will never prove safety
             //isSafeWithin(r, Config.tMax / 16.0) -> Partitioning.Item(r, Config.tMax / 16.0).also { println("safe - 1/16") }
             //isSafeWithin(r, Config.tMax / 4.0) -> Partitioning.Item(r, Config.tMax / 4.0).also { println("safe - 1/4") }
             isSafeWithin(r, Config.tMax) -> Partitioning.Item(r, Config.tMax)//.also { println("safe") }
