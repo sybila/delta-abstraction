@@ -206,7 +206,8 @@ private suspend fun experiments(granularity: Int) {
 
 fun main(args: Array<String>) {
     runBlocking {
-        experiments(20)
+        //experiments(20)
+        computePartitioning(20)
         /*val elapsed = measureTimeMillis {
             //computePartitioning(20)
             computeStates(2, 20)

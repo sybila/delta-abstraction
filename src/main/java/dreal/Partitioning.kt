@@ -53,7 +53,10 @@ fun OdeModel.granularPartitioning(steps: Int): Partitioning {
 }
 
 suspend fun ModelFactory.refineUnsafe(partitioning: Partitioning): Partitioning {
-    val done = partitioning.items.filter { it.isSafe || it.bounds.volume < Config.partitionPrecision }
+    val safe = partitioning.items.filter { it.isSafe }
+    val tooSmall = partitioning.items.filter { it.bounds.volume < Config.partitionPrecision }
+    val done = safe + tooSmall
+    println("Cut off ${tooSmall.size} as too small.")
     val toRefine = partitioning.items - done
 
     println("Refine partitioning: ${partitioning.items.size} (Unsafe volume: ${toRefine.map { it.bounds.volume }.sum()})")
