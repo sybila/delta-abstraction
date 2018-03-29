@@ -21,7 +21,7 @@ data class DeltaImage(
             Text(i.toString(), r.toSvgRectangle().center)
         }*/
 
-        val arrowSize = partitionRectangles.map { it.dimensions.x }.average() / 5.0
+        val arrowSize = partitionRectangles.map { it.dimensions.x }.average() / 2.0
 
         val states: Map<State, Circle?> = system.states.map { s ->
             s to when (s) {
@@ -48,7 +48,7 @@ data class DeltaImage(
 
         // WARNING: We are not drawing the exterior state, so some transitions will not be drawn!
 
-       /* val transitions = system.edges.mapNotNull { (source, destination) ->
+        val transitions = system.edges.mapNotNull { (source, destination) ->
             if (source == destination) null else {
                 val from = states[system.states[source]]
                 val to = states[system.states[destination]]
@@ -59,9 +59,9 @@ data class DeltaImage(
                     Line(a, b, Style.ARROW.strokeWidth(0.5))
                 }
             }
-        }*/
+        }
 
-        return SvgImage(partitionRectangles + partitionLabels + states.values.filterNotNull() /*+ transitions*/, arrowSize)
+        return SvgImage(partitionRectangles + partitionLabels + states.values.filterNotNull() + transitions, arrowSize)
     }
 
 }

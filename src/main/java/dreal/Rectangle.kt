@@ -3,6 +3,8 @@ package dreal
 import svg.Point
 import svg.Style
 import java.util.*
+import kotlin.coroutines.experimental.SequenceBuilder
+import kotlin.coroutines.experimental.buildSequence
 
 class Rectangle(
         private val bounds: DoubleArray
@@ -22,6 +24,23 @@ class Rectangle(
                 .flatMap {
                     sequenceOf(getFacet(it, true), getFacet(it, false))
                 }
+
+    // this is quite inefficient, but we can live with it for now
+    val vertices: Sequence<DoubleArray>
+        get() = buildSequence {
+                val result = DoubleArray(bounds.size / 2)
+                nextDimension(0, result)
+            }
+
+    private suspend fun SequenceBuilder<DoubleArray>.nextDimension(dim: Int, result: DoubleArray) {
+        if (dim == dimensions) yield(result)
+        else {
+            result[dim] = bounds[2 * dim]
+            nextDimension(dim + 1, result)
+            result[dim] = bounds[2 * dim + 1]
+            nextDimension(dim + 1, result)
+        }
+    }
 
     init {
         if (dimensions > 10) error("More than 10 dimensions are currently not supported!")
@@ -96,6 +115,13 @@ class Rectangle(
                 FacetIntersection(Rectangle(intersection), dimension, positive)
             }
         }
+    }
+
+    fun getIntersection(other: Rectangle): Rectangle? {
+        val newBounds = DoubleArray(bounds.size) { i ->
+            if (i % 2 == 0) Math.max(bounds[i], other.bounds[i]) else Math.min(bounds[i], other.bounds[i])
+        }
+        return if (newBounds.findInterval { a, b -> a > b } != null) null else Rectangle(newBounds)
     }
 
     fun getFacet(dimension: Int, positive: Boolean): Rectangle

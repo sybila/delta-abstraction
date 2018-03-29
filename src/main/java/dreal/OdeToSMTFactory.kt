@@ -35,6 +35,19 @@ fun OdeModel.toModelFactory() = object : ModelFactory {
         }
     }
 
+    override fun evalModelEquation(i: Int, values: DoubleArray): Double {
+        val eq = ode.variables[i].equation
+        return eq.fold(0.0) { sum, term ->
+            var termValue = term.constant
+            for (v in term.variableIndices) {
+               termValue *= values[v]
+            }
+            for (e in term.evaluable) {
+                termValue *= e.eval(values[e.varIndex])
+            }
+            sum + termValue
+        }
+    }
 }
 
 fun Evaluable.toSMT(names: List<String>): String = when (this) {

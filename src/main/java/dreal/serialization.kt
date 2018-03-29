@@ -56,17 +56,33 @@ fun DataInputStream.readState(rectangleNames: List<Rectangle>): State {
 }
 
 fun DataOutputStream.writeStates(states: List<State>) {
-    val rectangles = states.flatMap { when (it) {
-        is State.Exterior -> emptyList()
-        is State.Interior -> listOf(it.rectangle)
-        is State.Transition -> listOf(it.from, it.to, it.via)
-    } }
-    val rectangleNames = rectangles.mapIndexed { i, r -> r to i }.toMap()
+    println("Start writing states.")
+    val rectangleSet = HashSet<Rectangle>()
+    states.forEach {
+        when (it) {
+            is State.Interior -> rectangleSet.add(it.rectangle)
+            is State.Transition -> {
+                rectangleSet.add(it.from)
+                rectangleSet.add(it.to)
+                rectangleSet.add(it.via)
+            }
+        }
+    }
+    println("Got rectangle set.")
+    val rectangleIndices = rectangleSet.toList()
+    println("Got rectangle list.")
+    val rectangleNames = rectangleIndices.mapIndexed { i, r -> r to i  }.toMap()
 
-    writeInt(rectangles.size)
-    rectangles.forEach { writeRectangle(it) }
+    println("Start writing rectangles.")
+    writeInt(rectangleIndices.size)
+    rectangleIndices.forEach { writeRectangle(it) }
+    println("Rectangles written.")
     writeInt(states.size)
-    states.forEach { writeState(it, rectangleNames) }
+    states.forEachIndexed { i, it ->
+        if (i % 100000 == 0) println("Output progress $i/${states.size}")
+        writeState(it, rectangleNames)
+    }
+    println("States written.")
 }
 
 fun DataInputStream.readStates(): List<State> {

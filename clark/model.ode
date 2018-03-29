@@ -1,0 +1,67 @@
+/**
+    https_//www.e-cyanobacterium.org/models/model/36/
+**/
+
+external pow
+
+const v1 = 2e-18
+const v2 = k7 * N_sites/carb_V
+
+const k1 = 2.2e-4
+const k2 = 12100 + 1156*temp25
+const k3 = 6e-5 + 6e-5*temp25
+const k4 = 1.9e-4
+const k5 = 1.3e-3
+const k6 = pow(10, -(6.4 + 1e-4*tempSquared - 0.01*temperature + 1.7*ionicSquared - 1.9*ionic_strength))
+const k7 = 1.9e-23
+
+const kW = 1e-14
+const kH = pow(10, -(1.5 + 0.01*temp25 + 0.1*ionic_strength))
+
+const ext_pH = 0.2
+const ext_CO2 = kH * PCO2
+const ext_OH = pH_to_OH(ext_pH)
+const ext_HCO3 = (k2/k3) * ext_CO2 * ext_OH
+
+const cyt_pH = 8
+const cyt_OH = pH_to_OH(cyt_pH)
+var cyt_CO2 in [0..0.1]
+var cyt_HCO3 in [0..0.1]
+
+const carb_pH = 8
+const carb_O2 = 4e-4
+const carb_OH = pH_to_OH(carb_pH)
+const carb_V = 1.7e-17
+var carb_CO2 in [0..0.1]
+var carb_HCO3 in [0..0.1]
+
+fun pH_to_OH(pH) = kW / pow(10, -pH)
+
+const cell_V = 5.2e-16
+
+const PCO2 = 4e-4
+const fast = 100
+const temperature = 38
+const tempSquared = temperature * temperature
+const temp25 = temperature - 38
+const ionic_strength = 0.1
+const ionicSquared = ionic_strength * ionic_strength
+const N_sites = 13400
+const factor_CO2_dehyd = 1
+const factor_HCO3_dehyd = 1
+
+fun CO2_fixation_rate() = (v2*carb_CO2) / (carb_CO2 + k4*(1 + carb_O2/k5))
+fun CO2_hydration_carb() = factor_CO2_dehyd * fast * k2 * carb_OH * carb_CO2
+fun CO2_hydration_cyt() = k2 * cyt_CO2 * cyt_OH
+fun CO2_membrane_transport_in() = fast * (ext_CO2 - cyt_CO2)
+fun HCO3_dehydration_carb() = factor_HCO3_dehyd * fast * k3 * carb_HCO3
+fun HCO3_dehydration_cyt() = k3 * cyt_HCO3
+fun HCO3_membrane_transport() = ((v1*ext_HCO3)/(k1 + ext_HCO3))/cell_V
+fun HCO3_carboxysome_transport_in() = fast * (cyt_HCO3 - carb_HCO3)
+
+flow cyt_CO2 = -CO2_hydration_cyt() + CO2_membrane_transport_in() + HCO3_dehydration_cyt()
+flow cyt_HCO3 = CO2_hydration_cyt() - HCO3_carboxysome_transport_in() - HCO3_dehydration_cyt() + HCO3_membrane_transport()
+flow carb_CO2 = -CO2_fixation_rate() - CO2_hydration_carb() + HCO3_dehydration_carb()
+flow carb_HCO3 = CO2_hydration_carb() + HCO3_carboxysome_transport_in() - HCO3_dehydration_carb()
+
+

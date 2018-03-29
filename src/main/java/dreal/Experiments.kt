@@ -1,16 +1,23 @@
 package dreal
+import com.github.daemontus.tokenizer.parseLines
+import com.github.daemontus.validate
 import com.github.sybila.ode.model.Parser
 import kotlinx.coroutines.experimental.runBlocking
+import svg.DeltaImage
 import svg.toSvgImage
-import java.io.DataInputStream
-import java.io.DataOutputStream
-import java.io.File
+import java.io.*
+import kotlin.system.measureTimeMillis
+
+//private fun getModel() = Parser().parse(File(Config.projectRoot, "model.bio"))
+
+private fun getModel() = File(Config.projectRoot, "model.ode").useLines {
+    it.toList().parseLines().validate()
+}
 
 suspend fun computePartitioning(granularity: Int) {
-    val odeModel = Parser().parse(File(Config.projectRoot, "model.bio"))
+    val odeModel = getModel()
     val model = odeModel.toModelFactory()
 
-    //val boundsRect = Rectangle(odeModel.variables.flatMap { listOf(it.range.first, it.range.second) }.toDoubleArray())
     var partitioning = odeModel.granularPartitioning(granularity)// Partitioning(setOf(Partitioning.Item(boundsRect)))
 
     //var i = 0
@@ -26,17 +33,17 @@ suspend fun computePartitioning(granularity: Int) {
     } while (old != partitioning)
 
     val output = File(Config.projectRoot, "partitioning.$granularity.data")
-    DataOutputStream(output.outputStream()).use {
+    output.dataOutputStream().use {
         it.writePartitioning(partitioning)
     }
 }
 
 suspend fun computeStates(faceSplit: Int, granularity: Int) {
-    val odeModel = Parser().parse(File(Config.projectRoot, "model.bio"))
+    val odeModel = getModel()
     val model = odeModel.toModelFactory()
 
     val partitioningFile = File(Config.projectRoot, "partitioning.$granularity.data")
-    val partitioning = DataInputStream(partitioningFile.inputStream()).use { it.readPartitioning() }
+    val partitioning = partitioningFile.dataInputStream().use { it.readPartitioning() }
 
     val states = model.buildStateSpace(partitioning, faceSplit)
 
@@ -45,42 +52,59 @@ suspend fun computeStates(faceSplit: Int, granularity: Int) {
     imgOutput.writeText(image.toSvgImage().normalize(Config.targetWidth).compileSvg())*/
 
     val output = File(Config.projectRoot, "states.$granularity.$faceSplit.data")
-    DataOutputStream(output.outputStream()).use {
+    output.dataOutputStream().use {
         it.writeStates(states)
     }
 }
 
 suspend fun computeTransitions(faceSplit: Int, granularity: Int) {
-    val odeModel = Parser().parse(File(Config.projectRoot, "model.bio"))
+    val odeModel = getModel()
     val model = odeModel.toModelFactory()
 
+    println("Reading old system.")
+
+    val oldTS = if (faceSplit == 0) {
+        TransitionSystem(emptyList(), emptyList())
+    } else {
+        val oldStateFile = File(Config.projectRoot, "states.$granularity.${faceSplit - 1}.data")
+        val oldStates = oldStateFile.dataInputStream().use { it.readStates() }
+
+        val oldTransitionFile = File(Config.projectRoot, "transitions.$granularity.${faceSplit - 1}.data")
+        val oldTransitions = oldTransitionFile.dataInputStream().use { it.readTransitions() }
+
+        TransitionSystem(oldStates, oldTransitions)
+    }
+
+
     val partitioningFile = File(Config.projectRoot, "partitioning.$granularity.data")
-    val partitioning = DataInputStream(partitioningFile.inputStream()).use { it.readPartitioning() }
+    val partitioning = partitioningFile.dataInputStream().use { it.readPartitioning() }
+
+    println("Reading states.")
 
     val stateFile = File(Config.projectRoot, "states.$granularity.$faceSplit.data")
-    val states = DataInputStream(stateFile.inputStream()).use { it.readStates() }
+    val states = stateFile.dataInputStream().use { it.readStates() }
 
-    val transitions = model.buildTransitions(partitioning, states)
+    val transitions = model.buildTransitions(oldTS, partitioning, states)
 
-    /*val imgOutput = File(Config.projectRoot, "transitions.svg")
-    val image = DeltaImage(partitioning, TransitionSystem(states, transitions), emptySet())
-    imgOutput.writeText(image.toSvgImage().normalize(Config.targetWidth).compileSvg())*/
+    //val imgOutput = File(Config.projectRoot, "transitions.svg")
+    //val image = DeltaImage(partitioning, TransitionSystem(states, transitions), emptySet())
+    //imgOutput.writeText(image.toSvgImage().normalize(Config.targetWidth).compileSvg())
 
     val output = File(Config.projectRoot, "transitions.$granularity.$faceSplit.data")
-    DataOutputStream(output.outputStream()).use {
+    output.dataOutputStream().use {
         it.writeTransitions(transitions)
     }
 }
 
 fun computeTerminalComponents(faceSplit: Int, granularity: Int) {
     val partitioningFile = File(Config.projectRoot, "partitioning.$granularity.data")
-    val partitioning = DataInputStream(partitioningFile.inputStream()).use { it.readPartitioning() }
+    val partitioning = partitioningFile.dataInputStream().use { it.readPartitioning() }
 
     val stateFile = File(Config.projectRoot, "states.$granularity.$faceSplit.data")
-    val states = DataInputStream(stateFile.inputStream()).use { it.readStates() }
+    val states = stateFile.dataInputStream().use { it.readStates() }
 
     val transitionFile = File(Config.projectRoot, "transitions.$granularity.$faceSplit.data")
-    val transitions = DataInputStream(transitionFile.inputStream()).use { it.readTransitions() }
+    val transitions = transitionFile.dataInputStream().use { it.readTransitions() }
 
     val TS = TransitionSystem(states, transitions)
 
@@ -97,7 +121,7 @@ fun computeTerminalComponents(faceSplit: Int, granularity: Int) {
     }.toSet()
 
     println("Volume: ${terminalRectangles.map { it.volume }.sum()}")
-
+/*
     if (partitioning.items.first().bounds.dimensions == 2) {
         val image = partitioning.toSvgImage(terminalRectangles.toSet())
 
@@ -164,18 +188,38 @@ if wire is None:
 ${commands.joinToString(separator = "\n")}
 """
         output.writeText(script)
+    }*/
+}
+
+private suspend fun experiments(granularity: Int) {
+    val odeModel = getModel()
+    val model = odeModel.toModelFactory()
+
+    var partitioning = odeModel.granularPartitioning(granularity)
+
+    val zeros = partitioning.items.toList().filterParallel {
+        model.maybeHasZero(it.bounds)
     }
+    println("zeros: ${zeros.size}")
+    println(zeros)
 }
 
 fun main(args: Array<String>) {
     runBlocking {
-        //computePartitioning(10)
-        //computeStates(1, 10)
-        //computeTransitions(1, 10)
-        //computePartitioning(10)
-        //computeStates(0, 10)
-        //computeTransitions(0, 10)
-        computeTerminalComponents(2, 50)
+        experiments(20)
+        /*val elapsed = measureTimeMillis {
+            //computePartitioning(20)
+            computeStates(2, 20)
+            println("========== States computed ==========")
+            computeTransitions(2, 20)
+            //println("========== Transitions computed ==========")
+            //computeTerminalComponents(1, 20)
+        }
+        println("Solver calls ${Config.solverCalls.get()} in $elapsed")*/
+        /*computePartitioning(20)
+        computeStates(0, 20)
+        computeTransitions(0, 20)
+        computeTerminalComponents(0, 20)*/
         /*computeStates(1, 50)
         computeTransitions(1, 50)
         computeTerminalComponents(1, 50)
@@ -184,3 +228,6 @@ fun main(args: Array<String>) {
         computeTerminalComponents(2, 50)*/
     }
 }
+
+fun File.dataInputStream(): DataInputStream = DataInputStream(BufferedInputStream(this.inputStream()))
+fun File.dataOutputStream(): DataOutputStream = DataOutputStream(BufferedOutputStream(this.outputStream()))

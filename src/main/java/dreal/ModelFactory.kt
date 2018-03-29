@@ -18,6 +18,8 @@ interface ModelFactory {
 
     fun makeModelEquation(i: Int, names: List<String> = this.names): String
 
+    fun evalModelEquation(i: Int, values: DoubleArray): Double
+
     fun dimensionBounds(i: Int): Pair<Double, Double>
 
     fun unknownDimension(i: Int): Nothing = error("svg.Dimension $i does not exist in $this")

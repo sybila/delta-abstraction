@@ -51,12 +51,19 @@ ${names.makeLines { i, name -> "(declare-fun ${name}_0_t () Real ${r.interval(i)
 (assert (forall_t 1 [0 time] (and ${names.makeLines { i, name ->
 "(>= ${name}_0_t ${r.lBound(i)}) (<= ${name}_0_t ${r.hBound(i)})"
 }})))
-"""
+"""//.also { println(it) }
 
     return provedUnsat(makeQuery(query))
 }
 
 fun ModelFactory.maybeHasFlow(r: Rectangle, d: Int, positive: Boolean): Boolean {
+
+    val hasFlowInVertex = r.vertices.any { vertex ->
+        val value = evalModelEquation(d, vertex)
+        (positive && value > 0) || (!positive && value < 0)
+    }
+
+    if (hasFlowInVertex) return true
 
     val query =
 """
@@ -65,7 +72,7 @@ ${names.makeLines { i, name -> "(declare-fun $name () Real ${r.interval(i)})" }}
 
 ; Declare equation is positive/negative
 (assert (${if (positive) "<" else ">" } 0 ${makeModelEquation(d)}))
-"""
+"""//.also { if (d == 0 && !positive) println(it) }
 
     return !provedUnsat(makeQuery(query))
 
@@ -75,6 +82,17 @@ fun ModelFactory.maybeCanReach(bounds: Rectangle, from: Rectangle.FacetIntersect
 
     val (sR, sDim, sPositive) = from
     val (tR, tDim, tPositive) = to
+
+    /*val common = sR.getIntersection(tR)
+    if (common != null) {
+        val hasSinglePointFlow = common.vertices.any { vertex ->
+            val source = evalModelEquation(sDim, vertex)
+            val target = evalModelEquation(tDim, vertex)
+                    ((sPositive && source > 0) || (!sPositive && source < 0)) &&
+                    ((tPositive && target > 0) || (!tPositive && target < 0))
+        }
+        if (hasSinglePointFlow) return true
+    }*/
 
     val query =
 """

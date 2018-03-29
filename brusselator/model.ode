@@ -1,0 +1,8 @@
+var x in [0..6]
+var y in [0..6]
+
+const A = 1
+const B = 1.7
+
+flow x = A + (x * x * y) - x - (B * x)
+flow y = (B * x) - (x * x * y)
