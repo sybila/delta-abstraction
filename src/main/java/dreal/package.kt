@@ -7,6 +7,8 @@ import java.util.concurrent.atomic.AtomicLong
 
 class Timeout : RuntimeException()
 
+val timeouts = AtomicInteger(0)
+
 fun provedUnsat(query: String, precision: Double = 0.001): Boolean {
     val tempFile = File.createTempFile("input", ".smt2")
     tempFile.writeText(query)
@@ -16,7 +18,10 @@ fun provedUnsat(query: String, precision: Double = 0.001): Boolean {
     )
     val output = process.inputStream.bufferedReader().readLines()
     return when {
-        output.isEmpty() -> false.also { println("TIMEOUT")/*; println(query)*/ }  // returned when killed by timeout
+        output.isEmpty() -> false.also {
+            //println("TIMEOUT")/*; println(query)*/
+            if (timeouts.incrementAndGet() % 100 == 0) println("Timeouts: ${timeouts.get()}")
+        }  // returned when killed by timeout
         output.last() == "unsat" -> true
         "delta-sat" !in output.last() -> {
             println(query)
