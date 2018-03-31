@@ -206,8 +206,12 @@ private suspend fun experiments(granularity: Int) {
 
 fun main(args: Array<String>) {
     runBlocking {
+        val partitioningFile = File(Config.projectRoot, "partitioning.20.data")
+        val partitioning = partitioningFile.dataInputStream().use { it.readPartitioning() }
+        val unsafeVolume = partitioning.items.map { if (it.isSafe) 0.0 else it.bounds.volume }.sum()
+        println("Unsafe volume: $unsafeVolume")
         //experiments(20)
-        computePartitioning(20)
+        //computePartitioning(20)
         /*val elapsed = measureTimeMillis {
             //computePartitioning(20)
             computeStates(2, 20)
