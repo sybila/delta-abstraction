@@ -25,7 +25,7 @@ object Config {
      */
     val threadPool = newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), "worker")
 
-    val tMax: Double = 0.2
+    val tMax: Double = 0.1
 
     val skew: Double = 1.0
     val granularity = 30.0
@@ -33,9 +33,9 @@ object Config {
     val dReal = "/usr/local/bin/dreal"
     val coreutilsTimeout = "/usr/local/bin/gtimeout"
 
-    val timeout = "20s"
+    val timeout = "10s"
 
-    val partitionPrecision = 1e-10
+    val partitionPrecision = 1e-12
 
     fun projectFile(name: String) = File(projectRoot, name)
 

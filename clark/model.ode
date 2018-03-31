@@ -25,15 +25,15 @@ const ext_HCO3 = (k2/k3) * ext_CO2 * ext_OH
 
 const cyt_pH = 8
 const cyt_OH = pH_to_OH(cyt_pH)
-var cyt_CO2 in [0..0.05]
-var cyt_HCO3 in [0..0.05]
+var cyt_CO2 in [0..0.1]
+var cyt_HCO3 in [0..0.1]
 
 const carb_pH = 8
 const carb_O2 = 4e-4
 const carb_OH = pH_to_OH(carb_pH)
 const carb_V = 1.7e-17
-var carb_CO2 in [0..0.05]
-var carb_HCO3 in [0..0.05]
+var carb_CO2 in [0..0.1]
+var carb_HCO3 in [0..0.1]
 
 fun pH_to_OH(pH) = kW / pow(10, -pH)
 

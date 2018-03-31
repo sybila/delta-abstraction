@@ -2,6 +2,8 @@ package dreal
 
 import com.github.sybila.ode.generator.NodeEncoder
 import com.github.sybila.ode.model.OdeModel
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.experimental.buildSequence
 
 data class Partitioning(val items: Set<Item>) {
@@ -61,13 +63,20 @@ suspend fun ModelFactory.refineUnsafe(partitioning: Partitioning): Partitioning 
 
     println("Refine partitioning: ${partitioning.items.size} (Unsafe volume: ${toRefine.map { it.bounds.volume }.sum()})")
 
+    val safeCount = AtomicInteger(0)
+    val unsafeCount = AtomicInteger(0)
+
     val refined = toRefine.flatMap { (r, _) -> r.split() }.mapParallel { r ->
         when {
             //maybeHasZero(r) -> Partitioning.Item(r).also { println("unsafe - zero") }  // if it has zero, we will never prove safety
             //isSafeWithin(r, Config.tMax / 16.0) -> Partitioning.Item(r, Config.tMax / 16.0).also { println("safe - 1/16") }
             //isSafeWithin(r, Config.tMax / 4.0) -> Partitioning.Item(r, Config.tMax / 4.0).also { println("safe - 1/4") }
-            isSafeWithin(r, Config.tMax) -> Partitioning.Item(r, Config.tMax)//.also { println("safe") }
-            else -> Partitioning.Item(r)//.also { println("unsafe") }
+            isSafeWithin(r, Config.tMax) -> Partitioning.Item(r, Config.tMax).also {
+                if (safeCount.incrementAndGet() % 100 == 0) println("Safe: ${safeCount.get()}")
+            }//.also { println("safe") }
+            else -> Partitioning.Item(r).also {
+                if (unsafeCount.incrementAndGet() % 100 == 0) println("Unsafe: ${unsafeCount.get()}")
+            }//.also { println("unsafe") }
         }
     }
 
