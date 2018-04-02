@@ -72,6 +72,7 @@ suspend fun ModelFactory.refineUnsafe(partitioning: Partitioning): Partitioning 
             //isSafeWithin(r, Config.tMax / 16.0) -> Partitioning.Item(r, Config.tMax / 16.0).also { println("safe - 1/16") }
             //isSafeWithin(r, Config.tMax / 4.0) -> Partitioning.Item(r, Config.tMax / 4.0).also { println("safe - 1/4") }
             isSafeWithin(r, Config.tMax) -> Partitioning.Item(r, Config.tMax).also {
+                println("Safe!")
                 if (safeCount.incrementAndGet() % 100 == 0) println("Safe: ${safeCount.get()}")
             }//.also { println("safe") }
             else -> Partitioning.Item(r).also {

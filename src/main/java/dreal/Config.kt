@@ -30,7 +30,7 @@ object Config {
     val skew: Double = 1.0
     val granularity = 30.0
 
-    val dReal = "/usr/local/bin/dreal"
+    val dReal = "/Users/daemontus/Downloads/dReal/bin/dReal"
     val coreutilsTimeout = "/usr/local/bin/gtimeout"
 
     val timeout = "10s"
