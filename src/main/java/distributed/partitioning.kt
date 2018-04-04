@@ -45,7 +45,7 @@ fun generatePartitioning(experiment: File, granularity: Int) {
 }
 
 fun preparePartitioningJobs(experiment: File, iteration: Int) {
-    val iFolder = experiment.iterationFolder(0)
+    val iFolder = experiment.iterationFolder(iteration)
     val partitioning = iFolder.inputPartitioning().readPartitioning()
 
     val unsafe = partitioning.items.filter { !it.isSafe }
