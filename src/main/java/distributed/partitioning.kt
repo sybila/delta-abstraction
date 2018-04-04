@@ -105,5 +105,10 @@ fun mergePartitioningJobs(experiment: File, iteration: Int) {
         jobResult = iFolder.jobOutputFile(jobId)
     }
 
+    println("Final partitioning size: ${items.size}")
+
+    val nextIteration = experiment.iterationFolder(iteration + 1)
+
+    nextIteration.inputPartitioning().writePartitioning(Partitioning(items))
     iFolder.outputPartitioning().writePartitioning(Partitioning(items))
 }
