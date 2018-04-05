@@ -55,6 +55,7 @@ private fun File.writeStates(states: List<State>) = this.dataOutputStream().use 
 
 fun generateStateJobs(experiment: File) {
     val statesFolder = experiment.statesFolder()
+    statesFolder.mkdirs()
     val partitioning = experiment.partitioningFile().readPartitioning()
 
     val faceSplit = 0
@@ -129,10 +130,10 @@ fun mergeStates(experiment: File) {
     var jobId = 0
     var jobResult = statesFolder.stateJobOutput(jobId)
     while (jobResult.exists()) {
-        val data = experiment.readStates()
+        val data = jobResult.readStates()
         states.addAll(data)
         jobId += 1
-        jobResult = statesFolder.jobOutputFile(jobId)
+        jobResult = statesFolder.stateJobOutput(jobId)
     }
 
     val unsafeInterior = partitioning.items.filter { !it.isSafe }.map { State.Interior(it.bounds) }
