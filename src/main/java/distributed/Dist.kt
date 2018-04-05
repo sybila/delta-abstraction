@@ -11,6 +11,9 @@ fun main(args: Array<String>) {
             "p1-prepare-jobs" -> preparePartitioningJobs(File(args[1]), args[2].toInt())
             "p2-run-job" -> runPartitioningJob(File(args[1]), args[2].toInt(), args[3].toInt())
             "p3-merge" -> mergePartitioningJobs(File(args[1]), args[2].toInt())
+            "s1-prepare-jobs" -> generateStateJobs(File(args[1]))
+            "s2-run-job" -> runStatesJob(File(args[1]), args[2].toInt())
+            "s3-merge" -> mergeStates(File(args[1]))
         }
     }
 }
