@@ -56,7 +56,6 @@ fun DataInputStream.readState(rectangleNames: List<Rectangle>): State {
 }
 
 fun DataOutputStream.writeStates(states: List<State>) {
-    println("Start writing states.")
     val rectangleSet = HashSet<Rectangle>()
     states.forEach {
         when (it) {
@@ -68,21 +67,15 @@ fun DataOutputStream.writeStates(states: List<State>) {
             }
         }
     }
-    println("Got rectangle set.")
     val rectangleIndices = rectangleSet.toList()
-    println("Got rectangle list.")
     val rectangleNames = rectangleIndices.mapIndexed { i, r -> r to i  }.toMap()
 
-    println("Start writing rectangles.")
     writeInt(rectangleIndices.size)
     rectangleIndices.forEach { writeRectangle(it) }
-    println("Rectangles written.")
     writeInt(states.size)
     states.forEachIndexed { i, it ->
-        if (i % 100000 == 0) println("Output progress $i/${states.size}")
         writeState(it, rectangleNames)
     }
-    println("States written.")
 }
 
 fun DataInputStream.readStates(): List<State> {
