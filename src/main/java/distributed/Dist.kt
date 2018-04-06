@@ -14,6 +14,9 @@ fun main(args: Array<String>) {
             "s1-prepare-jobs" -> generateStateJobs(File(args[1]))
             "s2-run-job" -> runStatesJob(File(args[1]), args[2].toInt())
             "s3-merge" -> mergeStates(File(args[1]))
+            "t1-prepare-jobs" -> generateTransitionJobs(File(args[1]))
+            "t2-run-job" -> runTransJob(File(args[1]), args[2].toInt())
+            "t3-merge" -> mergeTransitions(File(args[1]))
         }
     }
 }
