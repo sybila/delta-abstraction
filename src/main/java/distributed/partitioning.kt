@@ -23,7 +23,14 @@ private fun File.modelFile() = File(this, "model.ode")
 private fun File.partitioningFile() = File(this, "partitioning.data")
 private fun File.statesFolder() = File(this, "states")
 private fun File.statesFile() = File(this, "states.data")
+private fun File.transitionsFolder() = File(this, "transitions")
+private fun File.transitionsFile() = File(this, "transitions.data")
 private fun File.iterationFolder(iteration: Int) = File(this, "p_$iteration")
+
+// transition job files
+private fun File.transJobInput(jobId: Int) = File(this, "job.$jobId.in.data")
+private fun File.transJobOutput(jobId: Int) = File(this, "job.$jobId.out.data")
+private fun File.transJobScript() = File(this, "jobs.sh")
 
 // state job files
 private fun File.stateJobInput(jobId: Int) = File(this, "job.$jobId.in.data")
@@ -51,6 +58,114 @@ private fun File.readStates(): List<State> = this.dataInputStream().use {
 
 private fun File.writeStates(states: List<State>) = this.dataOutputStream().use {
     it.writeStates(states)
+}
+
+private fun File.readTransitions(): List<Pair<Int, Int>> = this.dataInputStream().use {
+    it.readTransitions()
+}
+
+private fun File.writeTransitions(transtions: List<Pair<Int, Int>>) = this.dataOutputStream().use {
+    it.writeTransitions(transtions)
+}
+
+fun generateTransitionJobs(experiment: File) {
+    val transFolder = experiment.transitionsFolder()
+    transFolder.mkdirs()
+
+    val states = experiment.statesFile().readStates()
+
+    val transitionStates = states.filterIsInstance<State.Transition>()
+    val interiorStates = states.filterIsInstance<State.Interior>()
+
+    val indexMap = states.mapIndexed { i, s -> s to i }.toMap()
+
+    val statesByFrom = transitionStates.groupBy { it.from }
+
+    val transitions: List<Pair<Int, Int>> = states.map { source ->
+        source to when (source) {
+            is State.Interior -> listOf(source) + statesByFrom[source.rectangle]!!
+            is State.Exterior -> states.filter { target ->
+                target == source || (target is State.Transition && target.from.degenerateDimensions > 0)
+            }
+            is State.Transition -> if (source.to.degenerateDimensions > 0) {
+                // we are going out!
+                listOf(State.Exterior)
+            } else {
+                val interior = interiorStates.find { it.rectangle == source.to }
+                val transitions = statesByFrom[source.to]!!
+                if (interior != null) transitions + interior else transitions
+            }
+        }
+    }.flatMap { (source, successors) ->
+        successors.map { indexMap[source]!! to indexMap[it]!! }
+    }
+
+    println("Total transitions: ${transitions.size}")
+
+    val batchSize = ((transitions.size / 500) + 1)
+    println("Batch size: $batchSize")
+    val batchCount = Math.ceil(transitions.size.toDouble() / batchSize).toInt()
+    println("Batch count: $batchCount")
+    for (batch in 0 until batchCount) {
+        val trans = transitions.subList(batch * batchSize, ((batch+1) * batchSize).coerceAtMost(transitions.size))
+        transFolder.transJobInput(batch).writeTransitions(trans)
+    }
+
+    transFolder.transJobScript().writeText("""
+        #!/bin/bash
+        #PBS -l select=1:ncpus=1:mem=1gb:scratch_local=1gb
+        #PBS -l walltime=2:00:00
+
+        module add jdk-8
+
+        /storage/brno2/home/daemontus/delta-experiments/v1/bin/delta-abstraction t2-run-job ${experiment.absolutePath} ${"$"}PBS_ARRAY_INDEX
+        """.trimIndent())
+}
+
+fun runTransJob(experiment: File, jobId: Int) {
+    experiment.modelFile().loadModel().toModelFactory().run {
+        val partitioning = experiment.partitioningFile().readPartitioning()
+        val states = experiment.statesFile().readStates()
+        val transitions = experiment.transitionsFolder().transJobInput(jobId).readTransitions()
+
+        val timeMap = partitioning.items.map { (r, t) -> r to t }.toMap()
+
+        val actualTransitions = transitions.filter { (s, t) ->
+            val source = states[s]
+            val target = states[t]
+            if (source !is State.Transition || target !is State.Transition) true else {
+                val bounds = source.to
+                val safetyBound = timeMap[bounds]!!
+                if (safetyBound < 0.0) true else {
+                    val init = source.from.getFacetIntersection(source.to)!!.copy(rectangle = source.via)
+                    val final = target.from.getFacetIntersection(target.to)!!.copy(rectangle = target.via)
+
+                    maybeCanReach(bounds, init, final, safetyBound)
+                }
+            }
+        }
+
+        experiment.transitionsFolder().transJobOutput(jobId).writeTransitions(actualTransitions)
+    }
+}
+
+fun mergeTransitions(experiment: File) {
+    val transFolder = experiment.transitionsFolder()
+
+    val transitions = ArrayList<Pair<Int, Int>>()
+
+    var jobId = 0
+    var jobResult = transFolder.transJobOutput(jobId)
+    while (jobResult.exists()) {
+        val data = jobResult.readTransitions()
+        transitions.addAll(data)
+        jobId += 1
+        jobResult = transFolder.transJobOutput(jobId)
+    }
+
+    println("Total transitions: ${transitions.size}")
+
+    experiment.transitionsFile().writeTransitions(transitions)
 }
 
 fun generateStateJobs(experiment: File) {
