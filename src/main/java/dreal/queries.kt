@@ -51,7 +51,7 @@ ${names.makeLines { i, name -> "(declare-fun ${name}_0_t () Real ${r.interval(i)
 (assert (forall_t 1 [0 time] (and ${names.makeLines { i, name ->
 "(>= ${name}_0_t ${r.lBound(i)}) (<= ${name}_0_t ${r.hBound(i)})"
 }})))
-"""//.also { println(it) }
+"""//.also { println(it); error("stop") }
 
     return provedUnsat(makeQuery(query))
 }

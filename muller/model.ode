@@ -1,0 +1,59 @@
+
+
+const kLa_CO2_eff = 29
+const kH_cp = 0.03
+const P_in_atm = 1
+const gCO2_in_ppm = 5000
+const kB_f = 15.81
+const kB_b = 500000000
+const kW_b = 2
+const kW = 0.00000000000001
+
+# kW_f = kW / kW_b
+const kW_f = 0.000000000000005
+
+# 9.71e-5*3600
+const k1_m_b = 0.34956
+
+# 2.23e3 * 3600
+const k1_m_f = 8028000
+
+# 2.67e+4*3600
+const k1_p_b = 96120000
+
+# 3.71e-2*3600
+const k1_p_f = 133.56
+
+# 3.06e+5*3600
+const k2_m_b = 1101600000
+
+# 6e+9*3600
+const k2_m_f = 21600000000000
+
+# 5e+10*3600
+const k2_p_b = 180000000000000
+
+# 59.44*3600
+const k2_p_f = 213984
+
+# dCO2_sat = (kH_cp * gCO2_in_ppm * P_in_atm) / 1e+6
+const dCO2_sat = 0.00015
+
+const A_m = 4551.45e-6
+const HA = 10448.9e-6
+
+// var A_m in [0.002..0.02]
+// var HA in [0.002..0.02]
+var OH_m in [0.0000002..0.000002]
+var H_p in [0.00000001..0.0000001]
+var CO3_2m in [0.00001..0.0001]
+var HCO3_m in [0.0004..0.004]
+var dCO2 in [0.00002..0.0002]
+
+// flow A_m  =     kB_f*HA  -  kB_b*H_p*A_m
+// flow HA   =  -  kB_f*HA  +  kB_b*H_p*A_m
+flow OH_m =  -  k1_m_f*OH_m*dCO2  +  k1_m_b*HCO3_m  -  k2_m_f*OH_m*HCO3_m  +  k2_m_b*CO3_2m  +  kW_f  -  kW_b*OH_m*H_p
+flow H_p  =     k1_p_f*dCO2  -  k1_p_b*H_p*HCO3_m  +  k2_p_f*HCO3_m  -  k2_p_b*H_p*CO3_2m  +  kB_f*HA  -  kB_b*H_p*A_m  +  kW_f  -  kW_b*OH_m*H_p
+flow CO3_2m =     k2_m_f*OH_m*HCO3_m  -  k2_m_b*CO3_2m  +  k2_p_f*HCO3_m  -  k2_p_b*H_p*CO3_2m
+flow HCO3_m =     k1_m_f*OH_m*dCO2  -  k1_m_b*HCO3_m  +  k1_p_f*dCO2  -  k1_p_b*H_p*HCO3_m  -  k2_m_f*OH_m*HCO3_m  +  k2_m_b*CO3_2m  -  k2_p_f*HCO3_m  +  k2_p_b*H_p*CO3_2m
+flow dCO2   =  -  k1_m_f*OH_m*dCO2  +  k1_m_b*HCO3_m  -  k1_p_f*dCO2  +  k1_p_b*H_p*HCO3_m  +  dCO2_sat*kLa_CO2_eff  -  kLa_CO2_eff*dCO2

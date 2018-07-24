@@ -1,0 +1,10 @@
+
+const a = 15.81
+const b = 500000000
+const z = 0.00000008
+
+var x in [0.0 .. 0.02]
+var y in [0.0 .. 0.02]
+
+flow x = a * y - b * x * z
+flow y = -a * y + b * x * z

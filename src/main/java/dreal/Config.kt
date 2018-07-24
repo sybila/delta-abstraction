@@ -13,7 +13,7 @@ object Config {
     /**
      * The directory which contains the project files.
      */
-    val projectRoot = "clark/"
+    val projectRoot = "muller/"
 
     /**
      * Target SVG image size.
@@ -25,7 +25,7 @@ object Config {
      */
     val threadPool = newFixedThreadPoolContext(Runtime.getRuntime().availableProcessors(), "worker")
 
-    val tMax: Double = 0.1
+    val tMax: Double = 200.0
 
     val skew: Double = 1.0
     val granularity = 30.0
@@ -35,7 +35,7 @@ object Config {
 
     val timeout = "10s"
 
-    val partitionPrecision = 1e-12
+    val partitionPrecision = 1e-30
 
     fun projectFile(name: String) = File(projectRoot, name)
 

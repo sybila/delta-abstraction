@@ -20,13 +20,13 @@ suspend fun computePartitioning(granularity: Int) {
 
     var partitioning = odeModel.granularPartitioning(granularity)// Partitioning(setOf(Partitioning.Item(boundsRect)))
 
-    //var i = 0
+    var i = 0
     do {
         val old = partitioning
         partitioning = model.refineUnsafe(partitioning)
 
-        /*i += 1
-        val image = partitioning.toSvgImage(partitioning.items.mapNotNull { if (it.isSafe) null else it.bounds }.toSet())
+        i += 1
+        /*val image = partitioning.toSvgImage(partitioning.items.mapNotNull { if (it.isSafe) null else it.bounds }.toSet())
 
         val output = File(Config.projectRoot, "partitioning.$i.svg")
         output.writeText(image.normalize(Config.targetWidth).compileSvg())*/
@@ -86,9 +86,9 @@ suspend fun computeTransitions(faceSplit: Int, granularity: Int) {
 
     val transitions = model.buildTransitions(oldTS, partitioning, states)
 
-    //val imgOutput = File(Config.projectRoot, "transitions.svg")
-    //val image = DeltaImage(partitioning, TransitionSystem(states, transitions), emptySet())
-    //imgOutput.writeText(image.toSvgImage().normalize(Config.targetWidth).compileSvg())
+    val imgOutput = File(Config.projectRoot, "transitions.svg")
+    val image = DeltaImage(partitioning, TransitionSystem(states, transitions), emptySet())
+    imgOutput.writeText(image.toSvgImage().normalize(Config.targetWidth).compileSvg())
 
     val output = File(Config.projectRoot, "transitions.$granularity.$faceSplit.data")
     output.dataOutputStream().use {
@@ -121,13 +121,13 @@ fun computeTerminalComponents(faceSplit: Int, granularity: Int) {
     }.toSet()
 
     println("Volume: ${terminalRectangles.map { it.volume }.sum()}")
-/*
+
     if (partitioning.items.first().bounds.dimensions == 2) {
         val image = partitioning.toSvgImage(terminalRectangles.toSet())
 
         val output = File(Config.projectRoot, "terminal.$granularity.$faceSplit.svg")
         output.writeText(image.normalize(Config.targetWidth).compileSvg())
-    } else {
+    } /*else {
         val zThresholds = partitioning.items.asSequence().flatMap {
             sequenceOf(it.bounds.lBound(2), it.bounds.hBound(2))
         }.toSet().sorted()
@@ -207,16 +207,20 @@ private suspend fun experiments(granularity: Int) {
 fun experimentsMain(args: Array<String>) {
     runBlocking {
         //experiments(20)
-        computePartitioning(5)
-        /*val elapsed = measureTimeMillis {
-            //computePartitioning(20)
-            computeStates(2, 20)
-            println("========== States computed ==========")
-            computeTransitions(2, 20)
+        //computePartitioning(5)
+        val elapsed = measureTimeMillis {
+            //computePartitioning(1)
+            //computeStates(2, 20)
+            //println("========== States computed ==========")
+            //computeStates(0, 1)
+            //computeStates(1, 20)
+            computeTransitions(0, 1)
+            //computeTransitions(1, 20)
+            //computeTransitions(2, 20)
             //println("========== Transitions computed ==========")
-            //computeTerminalComponents(1, 20)
+            computeTerminalComponents(0, 1)
         }
-        println("Solver calls ${Config.solverCalls.get()} in $elapsed")*/
+        println("Solver calls ${Config.solverCalls.get()} in $elapsed")
         /*computePartitioning(20)
         computeStates(0, 20)
         computeTransitions(0, 20)

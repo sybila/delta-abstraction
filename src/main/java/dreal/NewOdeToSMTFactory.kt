@@ -79,12 +79,13 @@ fun OdeModel.toModelFactory() = object : ModelFactory {
 }
 
 fun OdeModel.granularPartitioning(steps: Int): Partitioning {
-    val stepSize = variables
+    /*val stepSize = variables
             .map { it.bounds }.map { (l, h) -> (h - l) / steps.toDouble() }
-            .min()!!
+            .min()!!*/
 
     val thresholds = variables.map {
         val (l, h) = it.bounds
+        val stepSize = (h - l) / steps.toDouble()
         buildSequence {
             var t = l
             do {
@@ -95,9 +96,14 @@ fun OdeModel.granularPartitioning(steps: Int): Partitioning {
         }.toList()
     }
 
+    println("steps: $steps")
+    //println("Thres: $thresholds")
+
     val newModel = com.github.sybila.ode.model.OdeModel(thresholds.mapIndexed { i, thres ->
         com.github.sybila.ode.model.OdeModel.Variable(variables[i].name, variables[i].bounds, thres, null, emptyList())
     })
+
+    //println("New model: $newModel")
 
     val encoder = NodeEncoder(newModel)
 

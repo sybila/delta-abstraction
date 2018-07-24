@@ -38,7 +38,7 @@ suspend fun ModelFactory.buildStateSpace(partitioning: Partitioning, faceSplit: 
     }
 
 
-    states.add(State.Exterior)
+    //states.add(State.Exterior)
     states.addAll(unsafeInterior)
     states.addAll(facetStates)
 
@@ -73,7 +73,7 @@ suspend fun ModelFactory.buildTransitions(old: TransitionSystem<State>, partitio
             }
             is State.Transition -> if (source.to.degenerateDimensions > 0) {
                 // we are going out!
-                listOf(State.Exterior)
+                emptyList()//listOf(State.Exterior)
             } else {
                 val interior = interiorStates.find { it.rectangle == source.to }
                 val transitions = statesByFrom[source.to]!!
